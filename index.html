@@ -382,6 +382,15 @@
     }
   }
 
+  
+  let riskScore = 0;
+  let sameClassCount = 0;
+  let lastRiskClass = "";
+  let alertShown = false;
+
+  const RISK_LIMIT = 10;
+
+
   async function predictLoop() {
     if (!running || predicting) return;
 
@@ -432,6 +441,58 @@
           Math.round(top.probability * 100) + "% confidence";
 
         setStatus("ตรวจจับอยู่");
+      
+        
+        // ระบบสะสมคะแนนความเสี่ยง
+        const currentClass = findExpectedClass(top.className);
+
+        if (currentClass === lastRiskClass) {
+          sameClassCount++;
+        } else {
+          lastRiskClass = currentClass;
+          sameClassCount = 1;
+        }
+
+        if (sameClassCount >= 3) {
+          if (currentClass === "Eye_Closed") {
+            riskScore += 2;
+          } else if (currentClass === "Yawning") {
+            riskScore += 1;
+          } else if (currentClass === "Eye_Open") {
+            riskScore = Math.max(0, riskScore - 1);
+          }
+
+          sameClassCount = 0;
+        }
+
+        // แสดงคะแนนบนเว็บไซต์
+        document.getElementById("riskScore").textContent =
+          riskScore + " คะแนน";
+
+        const level = document.getElementById("riskLevel");
+        const message = document.getElementById("riskMessage");
+
+        if (riskScore >= RISK_LIMIT) {
+          level.textContent = "ระดับเสี่ยงสูง";
+          message.textContent = "โปรดหยุดพักในที่ปลอดภัย";
+          level.style.color = "#ff5252";
+
+          if (!alertShown) {
+            alertShown = true;
+            alert("คะแนนความเสี่ยงสูง โปรดหยุดพักในที่ปลอดภัย");
+          }
+        } else if (riskScore >= 4) {
+          level.textContent = "ระดับเฝ้าระวัง";
+          message.textContent = "โปรดสังเกตอาการและเตรียมหยุดพัก";
+          level.style.color = "#ffb74d";
+          alertShown = false;
+        } else {
+          level.textContent = "ระดับปกติ";
+          message.textContent = "ยังไม่ถึงเกณฑ์แจ้งเตือน";
+          level.style.color = "#66bb6a";
+          alertShown = false;
+        }
+
       } else {
         resultEl.textContent = "ไม่พบคลาสที่ต้องการ";
         confidenceEl.textContent = "ตรวจสอบชื่อคลาสในโมเดล";
