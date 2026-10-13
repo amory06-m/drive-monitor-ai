@@ -1,233 +1,503 @@
+
 <!DOCTYPE html>
 <html lang="th">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#111827">
-  <title>Drive Monitor - ทดสอบ AI</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Drive Monitor AI</title>
+
   <style>
-    :root { color-scheme: dark; --bg:#111827; --panel:#1f2937; --line:#374151; --text:#f9fafb; --muted:#cbd5e1; --accent:#38bdf8; }
-    * { box-sizing:border-box; }
-    body { margin:0; padding:18px; font-family:system-ui,-apple-system,"Segoe UI",sans-serif; background:var(--bg); color:var(--text); }
-    main { max-width:640px; margin:0 auto; }
-    h1 { font-size:1.45rem; margin:0 0 6px; }
-    .sub { color:var(--muted); margin:0 0 16px; font-size:.95rem; line-height:1.5; }
-    .panel { background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:14px; margin:12px 0; }
-    #cameraBox { width:100%; background:#000; border-radius:12px; overflow:hidden; min-height:180px; display:flex; align-items:center; justify-content:center; }
-    video { display:block; width:100%; max-height:60vh; object-fit:cover; transform:scaleX(-1); }
-    .buttons { display:flex; gap:10px; flex-wrap:wrap; margin-top:12px; }
-    button { border:0; border-radius:10px; padding:12px 16px; font-size:1rem; font-weight:650; cursor:pointer; }
-    #startBtn { background:var(--accent); color:#082f49; }
-    #stopBtn { background:#4b5563; color:white; }
-    button:disabled { opacity:.5; cursor:not-allowed; }
-    #status { font-size:1.15rem; font-weight:750; margin:0 0 5px; }
-    #message, #debug { color:var(--muted); font-size:.9rem; line-height:1.5; overflow-wrap:anywhere; }
-    .prediction { margin:12px 0; }
-    .predHead { display:flex; justify-content:space-between; gap:12px; font-size:.92rem; margin-bottom:5px; }
-    .track { width:100%; height:10px; background:#374151; border-radius:999px; overflow:hidden; }
-    .bar { height:100%; width:0%; background:var(--accent); transition:width .12s linear; }
-    .warning { color:#fde68a; font-size:.88rem; line-height:1.5; }
-    .small { font-size:.82rem; color:var(--muted); line-height:1.5; }
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 20px 14px;
+      background: #101827;
+      color: #ffffff;
+      font-family: Arial, sans-serif;
+    }
+
+    main {
+      max-width: 650px;
+      margin: auto;
+    }
+
+    h1 {
+      text-align: center;
+      font-size: 28px;
+    }
+
+    .subtitle {
+      text-align: center;
+      color: #b5c2d3;
+      margin-bottom: 20px;
+    }
+
+    .panel {
+      background: #1b293d;
+      border: 1px solid #35445a;
+      border-radius: 15px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+
+    #camera-box {
+      width: 100%;
+      max-width: 400px;
+      aspect-ratio: 1 / 1;
+      margin: auto;
+      background: #080d14;
+      border-radius: 12px;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transform: scaleX(-1);
+    }
+
+    #placeholder {
+      color: #b5c2d3;
+      text-align: center;
+      padding: 20px;
+    }
+
+    .buttons {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 15px;
+      flex-wrap: wrap;
+    }
+
+    button {
+      border: none;
+      border-radius: 10px;
+      padding: 12px 18px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    #startBtn {
+      background: #69d3c3;
+      color: #10221f;
+    }
+
+    #stopBtn {
+      background: #35445a;
+      color: white;
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    #status {
+      margin-top: 15px;
+      padding: 12px;
+      border-radius: 9px;
+      background: #101827;
+      color: #b5c2d3;
+      text-align: center;
+      overflow-wrap: anywhere;
+    }
+
+    #result {
+      text-align: center;
+      font-size: 25px;
+      font-weight: bold;
+      margin: 12px 0;
+    }
+
+    #confidence {
+      text-align: center;
+      color: #b5c2d3;
+    }
+
+    .class-row {
+      margin: 20px 0;
+    }
+
+    .class-title {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 8px;
+      font-weight: bold;
+    }
+
+    .percentage {
+      color: #69d3c3;
+    }
+
+    .bar-background {
+      width: 100%;
+      height: 12px;
+      background: #0d1420;
+      border-radius: 20px;
+      overflow: hidden;
+    }
+
+    .bar {
+      width: 0%;
+      height: 100%;
+      background: #69d3c3;
+      transition: width 0.2s;
+    }
+
+    .note {
+      color: #b5c2d3;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .warning {
+      color: #ffd166 !important;
+    }
+
+    .error {
+      color: #ff7b86 !important;
+    }
   </style>
 </head>
+
 <body>
 <main>
-  <h1>Drive Monitor</h1>
-  <p class="sub">ทดสอบโมเดล Teachable Machine เดิมก่อนเพิ่ม MediaPipe และระบบคะแนน</p>
+
+  <h1>Drive Monitor AI</h1>
+  <div class="subtitle">
+    ระบบตรวจจับการหลับตาและการหาว
+  </div>
 
   <section class="panel">
-    <div id="cameraBox"><p id="cameraPlaceholder" class="small">กด “เริ่มตรวจจับ” แล้วอนุญาตให้ใช้กล้อง</p></div>
-    <div class="buttons">
-      <button id="startBtn" type="button">เริ่มตรวจจับ</button>
-      <button id="stopBtn" type="button" disabled>หยุดกล้อง</button>
+    <div id="camera-box">
+      <div id="placeholder">
+        กดปุ่มเริ่มตรวจจับเพื่อเปิดกล้อง
+      </div>
+
+      <video id="camera" autoplay playsinline muted hidden></video>
     </div>
-    <p id="message" role="status">สถานะ: ยังไม่ได้เริ่ม</p>
+
+    <div class="buttons">
+      <button id="startBtn">เริ่มตรวจจับ</button>
+      <button id="stopBtn" disabled>หยุดกล้อง</button>
+    </div>
+
+    <div id="status">พร้อมเริ่มทำงาน</div>
   </section>
 
   <section class="panel">
-    <p id="status">ผลตรวจจับ: —</p>
-    <p id="debug">ค่าความมั่นใจสูงสุดจะแสดงหลังเริ่มตรวจจับ</p>
-    <div id="predictions"></div>
+    <div class="subtitle">
+      ผลการตรวจจับ
+    </div>
+
+    <div id="result">ยังไม่มีผลทำนาย</div>
+    <div id="confidence">—</div>
   </section>
 
   <section class="panel">
-    <p class="warning"><strong>หมายเหตุ:</strong> นี่เป็นหน้าทดสอบโมเดล ไม่ใช่ระบบยืนยันความง่วงหรือระบบแจ้งเตือนเพื่อความปลอดภัย ห้ามใช้แทนการพักรถเมื่อรู้สึกง่วง</p>
-    <p class="small">หากกล้องไม่เปิด ให้ลองเปิดเว็บไซต์นี้ใน Safari/Chrome โดยตรง กดอนุญาตกล้อง และตรวจสอบว่า URL เป็น HTTPS</p>
+    <h3>ค่าความมั่นใจของโมเดล</h3>
+
+    <div class="class-row">
+      <div class="class-title">
+        <span>Yawning</span>
+        <span class="percentage" id="value-Yawning">0%</span>
+      </div>
+      <div class="bar-background">
+        <div class="bar" id="bar-Yawning"></div>
+      </div>
+    </div>
+
+    <div class="class-row">
+      <div class="class-title">
+        <span>Eye_Open</span>
+        <span class="percentage" id="value-Eye_Open">0%</span>
+      </div>
+      <div class="bar-background">
+        <div class="bar" id="bar-Eye_Open"></div>
+      </div>
+    </div>
+
+    <div class="class-row">
+      <div class="class-title">
+        <span>Eye_Closed</span>
+        <span class="percentage" id="value-Eye_Closed">0%</span>
+      </div>
+      <div class="bar-background">
+        <div class="bar" id="bar-Eye_Closed"></div>
+      </div>
+    </div>
+
+    <p id="modelClasses" class="note">
+      คลาสที่ต้องการ: Yawning, Eye_Open, Eye_Closed
+    </p>
   </section>
+
+  <section class="panel note">
+    เว็บไซต์นี้ใช้สำหรับทดสอบโมเดล AI เท่านั้น
+    ยังไม่ใช่อุปกรณ์ที่รับรองความปลอดภัยในการขับขี่
+  </section>
+
 </main>
 
+<!-- โหลด TensorFlow.js และ Teachable Machine -->
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
-<script>
-(() => {
-  // URL โมเดล Teachable Machine ที่ผู้ใช้ให้ไว้
-  const MODEL_URL = "https://teachablemachine.withgoogle.com/models/O5re32Lh5/";
 
+<script>
+  // ลิงก์โมเดลใหม่
+  const MODEL_URL =
+    "https://teachablemachine.withgoogle.com/models/ux_7UlB8f/";
+
+  // แสดงเฉพาะ 3 คลาสนี้
+  const EXPECTED_CLASSES = [
+    "Yawning",
+    "Eye_Open",
+    "Eye_Closed"
+  ];
+
+  const video = document.getElementById("camera");
+  const placeholder = document.getElementById("placeholder");
   const startBtn = document.getElementById("startBtn");
   const stopBtn = document.getElementById("stopBtn");
-  const cameraBox = document.getElementById("cameraBox");
-  const placeholder = document.getElementById("cameraPlaceholder");
-  const message = document.getElementById("message");
-  const status = document.getElementById("status");
-  const debug = document.getElementById("debug");
-  const predictionsBox = document.getElementById("predictions");
+  const statusEl = document.getElementById("status");
+  const resultEl = document.getElementById("result");
+  const confidenceEl = document.getElementById("confidence");
+  const modelClassesEl = document.getElementById("modelClasses");
 
   let model = null;
-  let video = null;
-  let stream = null;
+  let cameraStream = null;
   let running = false;
-  let animationId = null;
-  let busy = false;
-  let classNames = [];
+  let predicting = false;
+  let animationFrame = null;
 
-  function setMessage(text) { message.textContent = "สถานะ: " + text; }
-
-  function prettyName(name) {
-    const n = String(name || "").toLowerCase().trim();
-    const map = {
-      "open eyes":"ตาเปิด", "open eye":"ตาเปิด", "eyes open":"ตาเปิด",
-      "closed eyes":"ตาปิด", "closed eye":"ตาปิด", "eyes closed":"ตาปิด",
-      "yawning":"หาว", "yawn":"หาว",
-      "head down":"ก้มหน้า", "head-down":"ก้มหน้า", "looking down":"ก้มหน้า",
-      "ตาเปิด":"ตาเปิด", "ตาปิด":"ตาปิด", "หาว":"หาว", "ก้มหน้า":"ก้มหน้า"
-    };
-    return map[n] || name;
+  // ทำให้ชื่อคลาสเปรียบเทียบกันได้
+  function normalizeName(name) {
+    return String(name || "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, "");
   }
 
-  function buildPredictionRows(names) {
-    predictionsBox.innerHTML = "";
-    names.forEach((name, i) => {
-      const wrap = document.createElement("div");
-      wrap.className = "prediction";
-      const head = document.createElement("div");
-      head.className = "predHead";
-      const label = document.createElement("span");
-      label.textContent = prettyName(name);
-      const percent = document.createElement("span");
-      percent.id = "pct-" + i;
-      percent.textContent = "0%";
-      const track = document.createElement("div");
-      track.className = "track";
-      const bar = document.createElement("div");
-      bar.className = "bar";
-      bar.id = "bar-" + i;
-      track.appendChild(bar);
-      head.append(label, percent);
-      wrap.append(head, track);
-      predictionsBox.appendChild(wrap);
+  function findExpectedClass(className) {
+    return EXPECTED_CLASSES.find(name =>
+      normalizeName(name) === normalizeName(className)
+    ) || null;
+  }
+
+  function setStatus(message, type = "") {
+    statusEl.textContent = message;
+    statusEl.className = type;
+    statusEl.id = "status";
+  }
+
+  function resetResults() {
+    EXPECTED_CLASSES.forEach(name => {
+      document.getElementById("value-" + name).textContent = "0%";
+      document.getElementById("bar-" + name).style.width = "0%";
     });
+
+    resultEl.textContent = "กำลังรอผลทำนาย";
+    confidenceEl.textContent = "—";
   }
 
-  async function start() {
-    if (running) return;
+  // โหลดโมเดลและเปิดกล้อง
+  async function startDetection() {
     startBtn.disabled = true;
-    setMessage("กำลังโหลดโมเดล...");
-    status.textContent = "ผลตรวจจับ: กำลังเตรียม";
+    setStatus("กำลังโหลดโมเดล AI...");
+
     try {
-      if (!window.isSecureContext) {
-        throw new Error("หน้าเว็บนี้ไม่ใช่ HTTPS กรุณาเปิด URL เว็บไซต์ที่ขึ้นต้นด้วย https://");
-      }
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        throw new Error("เบราว์เซอร์นี้ไม่รองรับการเปิดกล้องผ่านหน้าเว็บ");
-      }
-
       if (!model) {
-        model = await tmImage.load(MODEL_URL + "model.json", MODEL_URL + "metadata.json");
-        classNames = model.getClassLabels();
-        if (!classNames || !classNames.length) {
-          classNames = Array.from({length:model.getTotalClasses()}, (_,i) => "Class " + (i+1));
+        const modelFile = MODEL_URL + "model.json";
+        const metadataFile = MODEL_URL + "metadata.json";
+
+        model = await tmImage.load(modelFile, metadataFile);
+
+        const labels = model.getClassLabels();
+
+        modelClassesEl.textContent =
+          "คลาสที่พบในโมเดล: " + labels.join(", ");
+
+        const missing = EXPECTED_CLASSES.filter(name =>
+          !labels.some(label => findExpectedClass(label) === name)
+        );
+
+        if (missing.length > 0) {
+          modelClassesEl.textContent +=
+            " | ไม่พบคลาส: " + missing.join(", ");
         }
-        buildPredictionRows(classNames);
       }
 
-      setMessage("กำลังขออนุญาตใช้กล้อง...");
-      stream = await navigator.mediaDevices.getUserMedia({
+      if (!navigator.mediaDevices ||
+          !navigator.mediaDevices.getUserMedia) {
+        throw new Error(
+          "ไม่สามารถใช้กล้องได้ กรุณาเปิดเว็บไซต์ผ่าน HTTPS"
+        );
+      }
+
+      cameraStream = await navigator.mediaDevices.getUserMedia({
         audio: false,
-        video: { facingMode: "user", width: {ideal: 640}, height: {ideal: 480} }
+        video: {
+          facingMode: "user"
+        }
       });
 
-      video = document.createElement("video");
-      video.autoplay = true;
-      video.muted = true;
-      video.playsInline = true;
-      video.setAttribute("playsinline", "");
-      video.setAttribute("webkit-playsinline", "");
-      video.srcObject = stream;
-      cameraBox.innerHTML = "";
-      cameraBox.appendChild(video);
+      video.srcObject = cameraStream;
+      video.hidden = false;
+      placeholder.hidden = true;
+
       await video.play();
 
       running = true;
       stopBtn.disabled = false;
-      setMessage("กำลังตรวจจับ");
-      status.textContent = "ผลตรวจจับ: กำลังวิเคราะห์";
-      loop();
-    } catch (err) {
-      console.error(err);
-      setMessage("เริ่มไม่สำเร็จ — " + (err && err.message ? err.message : String(err)));
-      status.textContent = "ผลตรวจจับ: ยังไม่มีข้อมูล";
+
+      resetResults();
+      setStatus("เปิดกล้องแล้ว กำลังตรวจจับ...");
+      animationFrame = requestAnimationFrame(predictLoop);
+
+    } catch (error) {
+      console.error(error);
+
+      if (cameraStream) {
+        cameraStream.getTracks().forEach(track => track.stop());
+        cameraStream = null;
+      }
+
+      video.srcObject = null;
+      video.hidden = true;
+      placeholder.hidden = false;
+
       startBtn.disabled = false;
       stopBtn.disabled = true;
-      if (stream) stream.getTracks().forEach(track => track.stop());
-      stream = null;
+
+      setStatus(
+        "เปิดกล้องหรือโหลดโมเดลไม่สำเร็จ: " + error.message,
+        "error"
+      );
     }
   }
 
-  async function loop() {
-    if (!running || busy) return;
-    busy = true;
+  // ประมวลผลภาพจากกล้องต่อเนื่อง
+  async function predictLoop() {
+    if (!running || predicting) return;
+
+    predicting = true;
+
     try {
-      if (video && video.readyState >= 2 && model) {
-        const results = await model.predict(video);
-        results.sort((a,b) => b.probability - a.probability);
-        const best = results[0];
-        status.textContent = "ผลตรวจจับ: " + prettyName(best.className);
-        debug.textContent = "คลาสที่โมเดลมั่นใจสูงสุด: " + best.className +
-          " (" + (best.probability * 100).toFixed(1) + "%)";
-        results.forEach(item => {
-          const i = classNames.indexOf(item.className);
-          if (i >= 0) {
-            const p = Math.max(0, Math.min(100, item.probability * 100));
-            const pct = document.getElementById("pct-" + i);
-            const bar = document.getElementById("bar-" + i);
-            if (pct) pct.textContent = p.toFixed(1) + "%";
-            if (bar) bar.style.width = p + "%";
-          }
-        });
+      // true ใช้ให้ภาพที่โมเดลรับตรงกับการกลับภาพแบบกล้องหน้า
+      const predictions = await model.predict(video, true);
+
+      const scores = {};
+      EXPECTED_CLASSES.forEach(name => {
+        scores[name] = 0;
+      });
+
+      predictions.forEach(item => {
+        const name = findExpectedClass(item.className);
+
+        if (name) {
+          scores[name] = item.probability;
+        }
+      });
+
+      // แสดงเปอร์เซ็นต์ของทั้ง 3 คลาส
+      EXPECTED_CLASSES.forEach(name => {
+        const percent = Math.round(scores[name] * 100);
+
+        document.getElementById("value-" + name).textContent =
+          percent + "%";
+
+        document.getElementById("bar-" + name).style.width =
+          percent + "%";
+      });
+
+      // เลือกคลาสที่มีค่าความมั่นใจสูงสุด
+      const matched = predictions
+        .filter(item => findExpectedClass(item.className))
+        .sort((a, b) => b.probability - a.probability);
+
+      if (matched.length > 0) {
+        const top = matched[0];
+
+        resultEl.textContent =
+          findExpectedClass(top.className);
+
+        confidenceEl.textContent =
+          Math.round(top.probability * 100) + "% confidence";
+
+        setStatus("ตรวจจับอยู่");
+      } else {
+        resultEl.textContent = "ไม่พบคลาสที่ต้องการ";
+
+        confidenceEl.textContent =
+          "ตรวจสอบชื่อคลาสของโมเดล";
+
+        setStatus(
+          "ชื่อคลาสไม่ตรงกับ Yawning, Eye_Open, Eye_Closed",
+          "warning"
+        );
       }
-    } catch (err) {
-      console.error(err);
-      setMessage("เกิดข้อผิดพลาดระหว่างวิเคราะห์ภาพ");
+
+    } catch (error) {
+      console.error(error);
+      setStatus(
+        "เกิดข้อผิดพลาดในการตรวจจับ: " + error.message,
+        "error"
+      );
+
     } finally {
-      busy = false;
-      if (running) animationId = requestAnimationFrame(loop);
+      predicting = false;
+
+      if (running) {
+        animationFrame = requestAnimationFrame(predictLoop);
+      }
     }
   }
 
-  function stop() {
+  // หยุดกล้อง
+  function stopDetection() {
     running = false;
-    if (animationId) cancelAnimationFrame(animationId);
-    animationId = null;
-    if (stream) stream.getTracks().forEach(track => track.stop());
-    stream = null;
-    video = null;
-    cameraBox.innerHTML = "";
-    const p = document.createElement("p");
-    p.id = "cameraPlaceholder";
-    p.className = "small";
-    p.textContent = "หยุดกล้องแล้ว กด “เริ่มตรวจจับ” เพื่อทดสอบอีกครั้ง";
-    cameraBox.appendChild(p);
-    stopBtn.disabled = true;
+
+    if (animationFrame !== null) {
+      cancelAnimationFrame(animationFrame);
+      animationFrame = null;
+    }
+
+    if (cameraStream) {
+      cameraStream.getTracks().forEach(track => track.stop());
+      cameraStream = null;
+    }
+
+    video.pause();
+    video.srcObject = null;
+    video.hidden = true;
+    placeholder.hidden = false;
+
     startBtn.disabled = false;
-    setMessage("หยุดแล้ว");
-    status.textContent = "ผลตรวจจับ: —";
-    debug.textContent = "เริ่มใหม่เพื่อดูผลทำนาย";
+    stopBtn.disabled = true;
+
+    setStatus("หยุดกล้องแล้ว");
   }
 
-  startBtn.addEventListener("click", start);
-  stopBtn.addEventListener("click", stop);
-  window.addEventListener("pagehide", stop);
-})();
+  startBtn.addEventListener("click", startDetection);
+  stopBtn.addEventListener("click", stopDetection);
+
+  window.addEventListener("pagehide", () => {
+    running = false;
+
+    if (cameraStream) {
+      cameraStream.getTracks().forEach(track => track.stop());
+    }
+  });
 </script>
+
 </body>
 </html>
