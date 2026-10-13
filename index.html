@@ -251,7 +251,8 @@
 
 <!-- โหลด TensorFlow.js และ Teachable Machine -->
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@teachablemachine/pose@latest/dist/teachablemachine-pose.min.js"></script>
+
 
 <script>
   // ลิงก์โมเดลใหม่
@@ -319,7 +320,7 @@
         const modelFile = MODEL_URL + "model.json";
         const metadataFile = MODEL_URL + "metadata.json";
 
-        model = await tmImage.load(modelFile, metadataFile);
+        model = await tmPose.load(modelFile, metadataFile);
 
         const labels = model.getClassLabels();
 
@@ -393,7 +394,17 @@
 
     try {
       // true ใช้ให้ภาพที่โมเดลรับตรงกับการกลับภาพแบบกล้องหน้า
-      const predictions = await model.predict(video, true);
+      
+const input = {
+  image: video,
+  flipHorizontal: true
+};
+
+const prediction = await model.estimatePose(video);
+const predictions = await model.predict({
+  posenetOutput: prediction.posenetOutput
+});
+
 
       const scores = {};
       EXPECTED_CLASSES.forEach(name => {
