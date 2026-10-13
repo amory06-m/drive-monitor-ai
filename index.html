@@ -7,166 +7,208 @@
   <title>Drive Monitor AI</title>
 
   <style>
-    * { box-sizing: border-box; }
+    * {
+      box-sizing: border-box;
+    }
 
     body {
       margin: 0;
-      padding: 20px 14px;
+      padding: 20px;
       background: #101827;
-      color: white;
+      color: #f3f4f6;
       font-family: Arial, sans-serif;
     }
 
     main {
-      max-width: 650px;
+      max-width: 850px;
       margin: auto;
     }
 
-    h1, h2 { text-align: center; }
+    h1 {
+      text-align: center;
+      margin-bottom: 8px;
+    }
+
+    h2, h3 {
+      margin-top: 0;
+    }
 
     .subtitle {
       text-align: center;
-      color: #b5c2d3;
-      margin-bottom: 20px;
+      color: #aebbd0;
+      margin-bottom: 24px;
     }
 
     .panel {
-      background: #1b293d;
-      border: 1px solid #35445a;
-      border-radius: 15px;
-      padding: 16px;
+      background: #1b2638;
+      border: 1px solid #344258;
+      border-radius: 14px;
+      padding: 18px;
       margin-bottom: 16px;
     }
 
     #camera-box {
+      position: relative;
       width: 100%;
-      max-width: 400px;
-      aspect-ratio: 1 / 1;
-      margin: auto;
-      background: #080d14;
-      border-radius: 12px;
+      min-height: 240px;
+      background: #080d15;
+      border-radius: 10px;
       overflow: hidden;
       display: flex;
       align-items: center;
       justify-content: center;
-      position: relative;
     }
 
-    video {
+    #camera {
+      display: block;
       width: 100%;
-      height: 100%;
-      object-fit: cover;
-      transform: scaleX(-1);
+      max-height: 480px;
+      object-fit: contain;
+    }
+
+    #camera[hidden],
+    #placeholder[hidden] {
+      display: none;
     }
 
     #placeholder {
-      color: #b5c2d3;
+      color: #aebbd0;
       text-align: center;
-      padding: 20px;
+      padding: 30px;
     }
 
     .buttons {
       display: flex;
-      justify-content: center;
-      gap: 10px;
-      margin-top: 15px;
       flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 14px;
     }
 
     button {
-      border: none;
-      border-radius: 10px;
       padding: 12px 18px;
-      font-size: 16px;
-      font-weight: bold;
+      border: 0;
+      border-radius: 8px;
+      background: #3478f6;
+      color: white;
+      font-size: 15px;
       cursor: pointer;
     }
 
-    #startBtn {
-      background: #69d3c3;
-      color: #10221f;
-    }
-
-    #stopBtn {
-      background: #35445a;
-      color: white;
-    }
-
     button:disabled {
-      opacity: 0.5;
+      opacity: 0.45;
       cursor: not-allowed;
     }
 
+    #stopBtn, #resetBtn {
+      background: #46546a;
+    }
+
     #status {
-      margin-top: 15px;
-      padding: 12px;
-      border-radius: 9px;
-      background: #101827;
-      color: #b5c2d3;
-      text-align: center;
+      margin-top: 14px;
+      color: #a9c9ff;
       overflow-wrap: anywhere;
     }
 
     #result {
-      text-align: center;
       font-size: 25px;
       font-weight: bold;
-      margin: 12px 0;
+      margin: 10px 0;
       overflow-wrap: anywhere;
     }
 
     #confidence {
-      text-align: center;
-      color: #b5c2d3;
+      color: #aebbd0;
     }
 
-    .class-row { margin: 20px 0; }
+    .score {
+      font-size: 44px;
+      font-weight: bold;
+      margin: 10px 0;
+    }
 
-    .class-title {
-      display: flex;
-      justify-content: space-between;
-      gap: 10px;
-      margin-bottom: 8px;
+    #riskLevel {
+      font-size: 20px;
       font-weight: bold;
     }
 
-    .percentage { color: #69d3c3; }
+    #riskMessage {
+      color: #d1d9e6;
+      line-height: 1.6;
+    }
+
+    .bar-row {
+      margin: 16px 0;
+    }
+
+    .bar-label {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 7px;
+    }
 
     .bar-background {
-      width: 100%;
       height: 12px;
-      background: #0d1420;
-      border-radius: 20px;
+      background: #0c1320;
+      border-radius: 8px;
       overflow: hidden;
     }
 
     .bar {
-      width: 0%;
       height: 100%;
-      background: #69d3c3;
+      width: 0%;
+      background: #59a6ff;
       transition: width 0.2s;
     }
 
     .note {
-      color: #b5c2d3;
+      color: #aebbd0;
       font-size: 13px;
       line-height: 1.6;
     }
 
-    .warning { color: #ffd166 !important; }
-    .error { color: #ff7b86 !important; }
+    .risk-meter {
+      height: 12px;
+      width: 100%;
+      border-radius: 8px;
+      background: #0c1320;
+      overflow: hidden;
+      margin: 14px 0;
+    }
+
+    #riskBar {
+      height: 100%;
+      width: 0%;
+      background: #55c78a;
+      transition: width 0.3s;
+    }
+
+    @media (max-width: 500px) {
+      body {
+        padding: 12px;
+      }
+
+      .panel {
+        padding: 14px;
+      }
+
+      .score {
+        font-size: 36px;
+      }
+    }
   </style>
 </head>
 
 <body>
 <main>
   <h1>Drive Monitor AI</h1>
-
   <div class="subtitle">
     ระบบตรวจจับการหาวและสถานะดวงตา
   </div>
 
   <section class="panel">
+    <h2>กล้องตรวจจับ</h2>
+
     <div id="camera-box">
       <div id="placeholder">
         กดปุ่มเริ่มตรวจจับเพื่อเปิดกล้อง
@@ -177,6 +219,7 @@
     <div class="buttons">
       <button id="startBtn">เริ่มตรวจจับ</button>
       <button id="stopBtn" disabled>หยุดกล้อง</button>
+      <button id="resetBtn">รีเซ็ตคะแนน</button>
     </div>
 
     <div id="status">พร้อมเริ่มทำงาน</div>
@@ -188,53 +231,52 @@
     <div id="confidence">—</div>
   </section>
 
-  
-<section class="panel">
-  <h2>คะแนนความเสี่ยง</h2>
+  <section class="panel">
+    <h2>คะแนนความเสี่ยง</h2>
 
-  <div id="riskScore"
-       style="font-size: 36px; font-weight: bold;">
-    0 คะแนน
-  </div>
+    <div id="riskScore" class="score">0%</div>
+    <div id="riskLevel">LOW — ความเสี่ยงต่ำ</div>
 
-  <div id="riskLevel"
-       style="font-size: 18px; margin-top: 8px;">
-    ระดับปกติ
-  </div>
+    <div class="risk-meter">
+      <div id="riskBar"></div>
+    </div>
 
-  <p id="riskMessage" class="note">
-    กำลังรอผลการตรวจจับจาก AI
-  </p>
-</section>
+    <p id="riskMessage">
+      คะแนนความเสี่ยงยังต่ำ ยังไม่มีการแจ้งเตือน
+    </p>
 
+    <p class="note">
+      LOW: 0–39% | MEDIUM: 40–69% | HIGH: 70–100%
+    </p>
+  </section>
 
   <section class="panel">
-    <h3>ค่าความมั่นใจของโมเดล</h3>
+    <h2>ค่าความมั่นใจของโมเดล AI</h2>
 
-    <div class="class-row">
-      <div class="class-title">
-        <span>Yawning</span>
-        <span class="percentage" id="value-Yawning">0%</span>
+    <div class="bar-row">
+      <div class="bar-label">
+        <span>Yawning — หาว</span>
+        <span id="value-Yawning">0%</span>
       </div>
       <div class="bar-background">
         <div class="bar" id="bar-Yawning"></div>
       </div>
     </div>
 
-    <div class="class-row">
-      <div class="class-title">
-        <span>Eye_Open</span>
-        <span class="percentage" id="value-Eye_Open">0%</span>
+    <div class="bar-row">
+      <div class="bar-label">
+        <span>Eye_Open — ตาเปิด</span>
+        <span id="value-Eye_Open">0%</span>
       </div>
       <div class="bar-background">
         <div class="bar" id="bar-Eye_Open"></div>
       </div>
     </div>
 
-    <div class="class-row">
-      <div class="class-title">
-        <span>Eye_Closed</span>
-        <span class="percentage" id="value-Eye_Closed">0%</span>
+    <div class="bar-row">
+      <div class="bar-label">
+        <span>Eye_Closed — ตาปิด</span>
+        <span id="value-Eye_Closed">0%</span>
       </div>
       <div class="bar-background">
         <div class="bar" id="bar-Eye_Closed"></div>
@@ -246,17 +288,24 @@
     </p>
   </section>
 
-  <section class="panel note">
-    เว็บไซต์นี้ใช้สำหรับทดสอบโมเดล AI เท่านั้น
-    ไม่ใช่อุปกรณ์ที่รับรองความปลอดภัยในการขับขี่
+  <section class="panel">
+    <h3>เกณฑ์การให้คะแนน</h3>
+    <p>• ตาปิดต่อเนื่องเกิน 3 วินาที และ AI มั่นใจอย่างน้อย 80%: เพิ่ม 80 คะแนน</p>
+    <p>• หาวต่อเนื่องเกิน 3 วินาที: เพิ่ม 40 คะแนน</p>
+    <p>• หาว 2 ครั้งภายใน 1 นาที: เพิ่ม 40 คะแนน</p>
+    <p>• คะแนนสูงสุด 100 คะแนน</p>
+    <p class="note">
+      คะแนนนี้เป็นเกณฑ์ทดลองของโครงงาน ไม่ใช่เกณฑ์ที่ผ่านการรับรอง
+      ระบบยังไม่ได้เชื่อม GPS หรือ Emergency SMS
+    </p>
   </section>
 </main>
 
-<!-- ใช้เวอร์ชันที่ระบุให้เข้ากับ Teachable Machine Pose -->
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.3.1/dist/tf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/pose@0.8.3/dist/teachablemachine-pose.min.js"></script>
 
 <script>
+  // URL โมเดล Teachable Machine Pose
   const MODEL_URL =
     "https://teachablemachine.withgoogle.com/models/O5re32Lh5/";
 
@@ -266,57 +315,267 @@
     "Eye_Closed"
   ];
 
-  const video = document.getElementById("camera");
-  const placeholder = document.getElementById("placeholder");
-  const startBtn = document.getElementById("startBtn");
-  const stopBtn = document.getElementById("stopBtn");
-  const statusEl = document.getElementById("status");
-  const resultEl = document.getElementById("result");
-  const confidenceEl = document.getElementById("confidence");
-  const modelClassesEl = document.getElementById("modelClasses");
+  const CONFIDENCE_LIMIT = 0.80;
+  const RISK_LIMIT = 70;
 
+  // ตัวแปรระบบกล้องและโมเดล
   let model = null;
   let cameraStream = null;
   let running = false;
   let predicting = false;
   let animationFrame = null;
 
-  function normalizeName(name) {
-    return String(name || "")
-      .toLowerCase()
-      .replace(/[^a-z0-9]/g, "");
-  }
+  // ตัวแปรระบบคะแนน
+  let riskScore = 0;
+  let lastRiskClass = "";
+  let classStartTime = 0;
+  let closedEventCounted = false;
+  let yawnEventCounted = false;
+  let yawnTimes = [];
+  let lastAlertLevel = "LOW";
 
+  // เสียงแจ้งเตือน
+  let audioContext = null;
+
+  const video = document.getElementById("camera");
+  const placeholder = document.getElementById("placeholder");
+  const startBtn = document.getElementById("startBtn");
+  const stopBtn = document.getElementById("stopBtn");
+
+  const resultEl = document.getElementById("result");
+  const confidenceEl = document.getElementById("confidence");
+
+  // รองรับชื่อคลาสที่อาจใช้ตัวพิมพ์ต่างกัน
   function findExpectedClass(className) {
-    return EXPECTED_CLASSES.find(name =>
-      normalizeName(name) === normalizeName(className)
-    ) || null;
+    const normalized = String(className)
+      .trim()
+      .toLowerCase()
+      .replace(/[\s-]+/g, "_");
+
+    const aliases = {
+      "yawning": "Yawning",
+      "yawn": "Yawning",
+      "eye_open": "Eye_Open",
+      "eyes_open": "Eye_Open",
+      "open_eye": "Eye_Open",
+      "eye_closed": "Eye_Closed",
+      "eyes_closed": "Eye_Closed",
+      "closed_eye": "Eye_Closed"
+    };
+
+    return aliases[normalized] || null;
   }
 
-  function setStatus(message, type = "") {
-    statusEl.textContent = message;
-    statusEl.className = type;
+  function setStatus(message, type = "normal") {
+    const status = document.getElementById("status");
+    status.textContent = message;
+
+    if (type === "error") {
+      status.style.color = "#ff7373";
+    } else if (type === "warning") {
+      status.style.color = "#ffbd69";
+    } else {
+      status.style.color = "#a9c9ff";
+    }
   }
 
-  function resetResults() {
-    EXPECTED_CLASSES.forEach(name => {
-      document.getElementById("value-" + name).textContent = "0%";
-      document.getElementById("bar-" + name).style.width = "0%";
-    });
+  function playAlertTone(level) {
+    try {
+      const AudioContextClass =
+        window.AudioContext || window.webkitAudioContext;
 
-    resultEl.textContent = "กำลังรอผลทำนาย";
-    confidenceEl.textContent = "—";
+      if (!AudioContextClass) return;
+
+      if (!audioContext) {
+        audioContext = new AudioContextClass();
+      }
+
+      if (audioContext.state === "suspended") {
+        audioContext.resume();
+      }
+
+      const now = audioContext.currentTime;
+      const isHigh = level === "HIGH";
+      const frequency = isHigh ? 1000 : 600;
+      const volume = isHigh ? 0.20 : 0.07;
+      const beepCount = isHigh ? 3 : 1;
+      const gap = isHigh ? 0.22 : 0;
+
+      for (let i = 0; i < beepCount; i++) {
+        const start = now + i * gap;
+        const oscillator = audioContext.createOscillator();
+        const gain = audioContext.createGain();
+
+        oscillator.type = "sine";
+        oscillator.frequency.value = frequency;
+
+        gain.gain.setValueAtTime(0.001, start);
+        gain.gain.exponentialRampToValueAtTime(
+          volume,
+          start + 0.025
+        );
+        gain.gain.exponentialRampToValueAtTime(
+          0.001,
+          start + 0.15
+        );
+
+        oscillator.connect(gain);
+        gain.connect(audioContext.destination);
+
+        oscillator.start(start);
+        oscillator.stop(start + 0.16);
+      }
+    } catch (error) {
+      console.warn("ไม่สามารถเล่นเสียงแจ้งเตือนได้", error);
+    }
+  }
+
+  function updateRiskDisplay() {
+    const level = document.getElementById("riskLevel");
+    const message = document.getElementById("riskMessage");
+    const scoreEl = document.getElementById("riskScore");
+    const bar = document.getElementById("riskBar");
+
+    scoreEl.textContent = riskScore + "%";
+    bar.style.width = riskScore + "%";
+
+    let currentLevel;
+
+    if (riskScore >= 70) {
+      currentLevel = "HIGH";
+      level.textContent = "HIGH — ความเสี่ยงสูง";
+      level.style.color = "#ff5252";
+      bar.style.background = "#ff5252";
+      message.textContent =
+        "ความเสี่ยงสูง โปรดหยุดขับและหาที่จอดพักอย่างปลอดภัย";
+    } else if (riskScore >= 40) {
+      currentLevel = "MEDIUM";
+      level.textContent = "MEDIUM — เริ่มอ่อนล้า";
+      level.style.color = "#ffb74d";
+      bar.style.background = "#ffb74d";
+      message.textContent =
+        "เริ่มอ่อนล้า ควรหยุดพักในที่ปลอดภัย";
+    } else {
+      currentLevel = "LOW";
+      level.textContent = "LOW — ความเสี่ยงต่ำ";
+      level.style.color = "#66bb6a";
+      bar.style.background = "#66bb6a";
+      message.textContent =
+        "คะแนนความเสี่ยงยังต่ำ ยังไม่มีการแจ้งเตือน";
+    }
+
+    // ส่งเสียงเฉพาะเมื่อเปลี่ยนระดับ ไม่เล่นซ้ำทุกเฟรม
+    if (currentLevel !== lastAlertLevel) {
+      if (currentLevel === "MEDIUM") {
+        playAlertTone("MEDIUM");
+      } else if (currentLevel === "HIGH") {
+        playAlertTone("HIGH");
+      }
+
+      lastAlertLevel = currentLevel;
+    }
+  }
+
+  function addRiskScore(points) {
+    riskScore = Math.min(100, riskScore + points);
+    updateRiskDisplay();
+  }
+
+  function resetScore() {
+    riskScore = 0;
+    lastRiskClass = "";
+    classStartTime = 0;
+    closedEventCounted = false;
+    yawnEventCounted = false;
+    yawnTimes = [];
+    lastAlertLevel = "LOW";
+
+    updateRiskDisplay();
+    setStatus(
+      running
+        ? "รีเซ็ตคะแนนแล้ว กำลังตรวจจับต่อ"
+        : "รีเซ็ตคะแนนแล้ว"
+    );
+  }
+
+  function resetClassTracking() {
+    lastRiskClass = "";
+    classStartTime = 0;
+    closedEventCounted = false;
+    yawnEventCounted = false;
+  }
+
+  function updateClassTracking(currentClass, now) {
+    // เริ่มจับเวลาใหม่เมื่อคลาสเปลี่ยน
+    if (currentClass !== lastRiskClass) {
+      lastRiskClass = currentClass;
+      classStartTime = now;
+      closedEventCounted = false;
+      yawnEventCounted = false;
+
+      // นับจำนวนครั้งที่เริ่มหาว
+      if (currentClass === "Yawning") {
+        yawnTimes = yawnTimes.filter(
+          time => now - time < 60000
+        );
+
+        yawnTimes.push(now);
+
+        // หาว 2 ครั้งภายใน 1 นาที
+        if (yawnTimes.length >= 2) {
+          addRiskScore(40);
+          yawnTimes = [];
+          yawnEventCounted = true;
+        }
+      }
+    }
+
+    const duration = now - classStartTime;
+
+    // ตาปิดต่อเนื่องเกิน 3 วินาที
+    if (
+      currentClass === "Eye_Closed" &&
+      duration > 3000 &&
+      !closedEventCounted
+    ) {
+      addRiskScore(80);
+      closedEventCounted = true;
+    }
+
+    // หาวต่อเนื่องเกิน 3 วินาที
+    // ถ้าเหตุการณ์หาวนี้ได้คะแนนจากกฎ 2 ครั้ง/นาทีแล้ว
+    // จะไม่บวกซ้ำให้การหาวครั้งเดียวกัน
+    if (
+      currentClass === "Yawning" &&
+      duration > 3000 &&
+      !yawnEventCounted
+    ) {
+      addRiskScore(40);
+      yawnEventCounted = true;
+    }
   }
 
   async function startDetection() {
     startBtn.disabled = true;
-    setStatus("กำลังโหลดโมเดล Pose AI...");
+    setStatus("กำลังโหลดโมเดล AI...");
 
     try {
       if (typeof tmPose === "undefined") {
         throw new Error(
           "โหลดไลบรารี Pose ไม่สำเร็จ กรุณาตรวจสอบอินเทอร์เน็ต"
         );
+      }
+
+      // เปิดเสียงจากการกดปุ่มของผู้ใช้
+      const AudioContextClass =
+        window.AudioContext || window.webkitAudioContext;
+
+      if (AudioContextClass && !audioContext) {
+        audioContext = new AudioContextClass();
+      }
+
+      if (audioContext && audioContext.state === "suspended") {
+        await audioContext.resume();
       }
 
       if (!model) {
@@ -327,31 +586,32 @@
 
         const labels = model.getClassLabels();
 
-        modelClassesEl.textContent =
+        document.getElementById("modelClasses").textContent =
           "คลาสในโมเดล: " + labels.join(", ");
 
-        const missing = EXPECTED_CLASSES.filter(name =>
-          !labels.some(label => findExpectedClass(label) === name)
+        const missingClasses = EXPECTED_CLASSES.filter(
+          expected =>
+            !labels.some(
+              label => findExpectedClass(label) === expected
+            )
         );
 
-        if (missing.length > 0) {
-          modelClassesEl.textContent +=
-            " | ไม่พบคลาสที่ต้องการ: " + missing.join(", ");
+        if (missingClasses.length > 0) {
+          throw new Error(
+            "ไม่พบคลาสในโมเดล: " + missingClasses.join(", ")
+          );
         }
       }
 
-      if (!navigator.mediaDevices ||
-          !navigator.mediaDevices.getUserMedia) {
-        throw new Error(
-          "ใช้กล้องไม่ได้ กรุณาเปิดเว็บไซต์ผ่าน HTTPS"
-        );
-      }
+      setStatus("กำลังขออนุญาตใช้กล้อง...");
 
       cameraStream = await navigator.mediaDevices.getUserMedia({
-        audio: false,
         video: {
-          facingMode: "user"
-        }
+          facingMode: "user",
+          width: { ideal: 640 },
+          height: { ideal: 480 }
+        },
+        audio: false
       });
 
       video.srcObject = cameraStream;
@@ -363,33 +623,24 @@
       running = true;
       stopBtn.disabled = false;
 
-      resetResults();
-      setStatus("เปิดกล้องแล้ว กำลังตรวจจับ...");
-
+      setStatus("กล้องพร้อม กำลังตรวจจับ");
       animationFrame = requestAnimationFrame(predictLoop);
 
     } catch (error) {
       console.error(error);
+
+      running = false;
       releaseCamera();
 
       startBtn.disabled = false;
       stopBtn.disabled = true;
 
       setStatus(
-        "เปิดกล้องหรือโหลดโมเดลไม่สำเร็จ: " + error.message,
+        "เริ่มตรวจจับไม่สำเร็จ: " + error.message,
         "error"
       );
     }
   }
-
-  
-  let riskScore = 0;
-  let sameClassCount = 0;
-  let lastRiskClass = "";
-  let alertShown = false;
-
-  const RISK_LIMIT = 10;
-
 
   async function predictLoop() {
     if (!running || predicting) return;
@@ -397,13 +648,11 @@
     predicting = true;
 
     try {
-      // ขั้นที่ 1: ประมวลผลภาพด้วย PoseNet
       const { posenetOutput } = await model.estimatePose(
         video,
         false
       );
 
-      // ขั้นที่ 2: ส่งผล PoseNet ให้โมเดลจำแนกคลาส
       const predictions = await model.predict(posenetOutput);
 
       const scores = {};
@@ -419,6 +668,7 @@
         }
       });
 
+      // แสดงเปอร์เซ็นต์ความมั่นใจของแต่ละคลาส
       EXPECTED_CLASSES.forEach(name => {
         const percent = Math.round(scores[name] * 100);
 
@@ -435,67 +685,27 @@
 
       if (matched.length > 0) {
         const top = matched[0];
+        const currentClass = findExpectedClass(top.className);
 
-        resultEl.textContent = findExpectedClass(top.className);
+        resultEl.textContent = currentClass;
         confidenceEl.textContent =
           Math.round(top.probability * 100) + "% confidence";
 
         setStatus("ตรวจจับอยู่");
-      
-        
-        // ระบบสะสมคะแนนความเสี่ยง
-        const currentClass = findExpectedClass(top.className);
 
-        if (currentClass === lastRiskClass) {
-          sameClassCount++;
+        // นับเวลาและคะแนนเฉพาะผลที่ AI มั่นใจ >= 80%
+        if (top.probability >= CONFIDENCE_LIMIT) {
+          updateClassTracking(currentClass, Date.now());
         } else {
-          lastRiskClass = currentClass;
-          sameClassCount = 1;
-        }
-
-        if (sameClassCount >= 3) {
-          if (currentClass === "Eye_Closed") {
-            riskScore += 2;
-          } else if (currentClass === "Yawning") {
-            riskScore += 1;
-          } else if (currentClass === "Eye_Open") {
-            riskScore = Math.max(0, riskScore - 1);
-          }
-
-          sameClassCount = 0;
-        }
-
-        // แสดงคะแนนบนเว็บไซต์
-        document.getElementById("riskScore").textContent =
-          riskScore + " คะแนน";
-
-        const level = document.getElementById("riskLevel");
-        const message = document.getElementById("riskMessage");
-
-        if (riskScore >= RISK_LIMIT) {
-          level.textContent = "ระดับเสี่ยงสูง";
-          message.textContent = "โปรดหยุดพักในที่ปลอดภัย";
-          level.style.color = "#ff5252";
-
-          if (!alertShown) {
-            alertShown = true;
-            alert("คะแนนความเสี่ยงสูง โปรดหยุดพักในที่ปลอดภัย");
-          }
-        } else if (riskScore >= 4) {
-          level.textContent = "ระดับเฝ้าระวัง";
-          message.textContent = "โปรดสังเกตอาการและเตรียมหยุดพัก";
-          level.style.color = "#ffb74d";
-          alertShown = false;
-        } else {
-          level.textContent = "ระดับปกติ";
-          message.textContent = "ยังไม่ถึงเกณฑ์แจ้งเตือน";
-          level.style.color = "#66bb6a";
-          alertShown = false;
+          resetClassTracking();
         }
 
       } else {
         resultEl.textContent = "ไม่พบคลาสที่ต้องการ";
-        confidenceEl.textContent = "ตรวจสอบชื่อคลาสในโมเดล";
+        confidenceEl.textContent =
+          "ตรวจสอบชื่อคลาสในโมเดล";
+
+        resetClassTracking();
 
         setStatus(
           "ชื่อคลาสไม่ตรงกับ Yawning, Eye_Open, Eye_Closed",
@@ -506,7 +716,6 @@
     } catch (error) {
       console.error(error);
 
-      // หยุดลูปเมื่อเกิดข้อผิดพลาด ป้องกัน error ซ้ำต่อเนื่อง
       running = false;
       releaseCamera();
 
@@ -556,11 +765,17 @@
 
   startBtn.addEventListener("click", startDetection);
   stopBtn.addEventListener("click", stopDetection);
+  document.getElementById("resetBtn").addEventListener(
+    "click",
+    resetScore
+  );
 
   window.addEventListener("pagehide", () => {
     running = false;
     releaseCamera();
   });
+
+  updateRiskDisplay();
 </script>
 </body>
 </html>
