@@ -395,15 +395,16 @@
     try {
       // true ใช้ให้ภาพที่โมเดลรับตรงกับการกลับภาพแบบกล้องหน้า
       
-const input = {
-  image: video,
-  flipHorizontal: true
-};
 
-const prediction = await model.estimatePose(video);
-const predictions = await model.predict({
-  posenetOutput: prediction.posenetOutput
-});
+const flipHorizontal = true;
+
+const { pose, posenetOutput } = await model.estimatePose(
+  video,
+  flipHorizontal
+);
+
+const predictions = await model.predict(posenetOutput);
+
 
 
       const scores = {};
