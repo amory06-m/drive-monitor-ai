@@ -24,7 +24,12 @@
       border-radius: 10px; overflow: hidden;
       display: flex; align-items: center; justify-content: center;
     }
-    #camera { width: 100%; max-height: 480px; object-fit: contain; }
+   #camera {
+  width: 100%;
+  max-height: 480px;
+  object-fit: contain;
+  transform: none;
+}
     #camera[hidden], #placeholder[hidden] { display: none; }
     #placeholder { color: #aebbd0; text-align: center; padding: 30px; }
     .buttons { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
@@ -58,9 +63,7 @@
       .panel { padding: 14px; }
       .score { font-size: 36px; }
     }
-   canvas {
-  transform: scaleX(-1);
-}
+  
   </style>
 </head>
 
