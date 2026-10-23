@@ -1,836 +1,108 @@
-
 <!DOCTYPE html>
 <html lang="th">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Drive Monitor AI</title>
-
-  <style>
-    * {
-      box-sizing: border-box;
-    }
-
-    body {
-      margin: 0;
-      padding: 18px;
-      background: #101827;
-      color: #f3f4f6;
-      font-family: Arial, sans-serif;
-    }
-
-    main {
-      max-width: 850px;
-      margin: auto;
-    }
-
-    h1,
-    .subtitle {
-      text-align: center;
-    }
-
-    .subtitle {
-      color: #aebbd0;
-      margin-bottom: 24px;
-    }
-
-    .panel {
-      background: #1b2638;
-      border: 1px solid #344258;
-      border-radius: 14px;
-      padding: 18px;
-      margin-bottom: 16px;
-    }
-
-    #camera-box {
-      width: 100%;
-      min-height: 230px;
-      background: #080d15;
-      border-radius: 10px;
-      overflow: hidden;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    /*
-      แสดงภาพกล้องตามทิศทางต้นฉบับ
-      ไม่กลับด้านซ้าย-ขวาด้วย CSS
-    */
-    video#camera {
-      display: block;
-      width: 100%;
-      max-height: 480px;
-      object-fit: contain;
-      transform: none !important;
-      -webkit-transform: none !important;
-    }
-
-    #camera[hidden],
-    #placeholder[hidden] {
-      display: none;
-    }
-
-    #placeholder {
-      color: #aebbd0;
-      text-align: center;
-      padding: 30px;
-    }
-
-    .buttons {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin-top: 14px;
-    }
-
-    button {
-      padding: 12px 16px;
-      border: 0;
-      border-radius: 8px;
-      background: #3478f6;
-      color: white;
-      font-size: 15px;
-      cursor: pointer;
-    }
-
-    button:disabled {
-      opacity: .5;
-      cursor: not-allowed;
-    }
-
-    #stopBtn,
-    #resetBtn {
-      background: #46546a;
-    }
-
-    #gpsBtn {
-      background: #16865b;
-    }
-
-    #status {
-      margin-top: 14px;
-      color: #a9c9ff;
-      overflow-wrap: anywhere;
-    }
-
-    #result {
-      font-size: 25px;
-      font-weight: bold;
-      margin: 10px 0;
-    }
-
-    #confidence,
-    .note {
-      color: #aebbd0;
-    }
-
-    .score {
-      font-size: 44px;
-      font-weight: bold;
-      margin: 10px 0;
-    }
-
-    #riskLevel {
-      font-size: 20px;
-      font-weight: bold;
-    }
-
-    #riskMessage {
-      line-height: 1.6;
-    }
-
-    .risk-meter,
-    .bar-background {
-      height: 12px;
-      background: #0c1320;
-      border-radius: 8px;
-      overflow: hidden;
-    }
-
-    .risk-meter {
-      margin: 14px 0;
-    }
-
-    #riskBar,
-    .bar {
-      height: 100%;
-      width: 0%;
-      background: #55c78a;
-      transition: width .2s;
-    }
-
-    .bar {
-      background: #59a6ff;
-    }
-
-    .bar-row {
-      margin: 16px 0;
-    }
-
-    .bar-label {
-      display: flex;
-      justify-content: space-between;
-      gap: 10px;
-      margin-bottom: 7px;
-    }
-
-    .note {
-      font-size: 13px;
-      line-height: 1.6;
-    }
-
-    @media (max-width: 500px) {
-      body {
-        padding: 10px;
-      }
-
-      .panel {
-        padding: 14px;
-      }
-
-      .score {
-        font-size: 36px;
-      }
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Drive Monitor Detection</title>
+    <!-- โหลดไลบรารี MediaPipe Face Mesh -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
+    <style>
+        body { margin: 0; background: #000; text-align: center; color: white; font-family: sans-serif; }
+        video { display: none; } /* ซ่อนวิดีโอดิบ แสดงผลแค่ Canvas */
+        canvas { width: 100vw; height: 100vh; object-fit: cover; }
+        #status { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); 
+                  background: rgba(0,0,0,0.7); padding: 10px 20px; font-size: 20px; border-radius: 8px; }
+    </style>
 </head>
-
 <body>
-<main>
-  <h1>Drive Monitor AI</h1>
-  <div class="subtitle">
-    ระบบตรวจจับการหาวและสถานะดวงตา
-  </div>
+    <div id="status">กำลังโหลดระบบตรวจจับ...</div>
+    <video id="webcam" autoplay playsinline></video>
+    <canvas id="output_canvas"></canvas>
 
-  <section class="panel">
-    <h2>กล้องตรวจจับ</h2>
+    <script>
+        const videoElement = document.getElementById('webcam');
+        const canvasElement = document.getElementById('output_canvas');
+        const canvasCtx = canvasElement.getContext('2d');
+        const statusDiv = document.getElementById('status');
 
-    <div id="camera-box">
-      <div id="placeholder">
-        กดปุ่มเริ่มตรวจจับเพื่อเปิดกล้อง
-      </div>
+        let lastState = "";
 
-      <video
-        id="camera"
-        autoplay
-        playsinline
-        muted
-        hidden
-      ></video>
-    </div>
-
-    <div class="buttons">
-      <button id="startBtn">เริ่มตรวจจับ</button>
-      <button id="stopBtn" disabled>หยุดกล้อง</button>
-      <button id="resetBtn">รีเซ็ตคะแนน</button>
-    </div>
-
-    <div id="status">พร้อมเริ่มทำงาน</div>
-  </section>
-
-  <section class="panel">
-    <h2>ผลการตรวจจับ</h2>
-    <div id="result">ยังไม่มีผลทำนาย</div>
-    <div id="confidence">—</div>
-  </section>
-
-  <section class="panel">
-    <h2>คะแนนความเสี่ยง</h2>
-    <div id="riskScore" class="score">0%</div>
-    <div id="riskLevel">LOW — ความเสี่ยงต่ำ</div>
-
-    <div class="risk-meter">
-      <div id="riskBar"></div>
-    </div>
-
-    <p id="riskMessage">
-      คะแนนความเสี่ยงยังต่ำ ยังไม่มีการแจ้งเตือน
-    </p>
-
-    <p class="note">
-      LOW: 0–39% | MEDIUM: 40–69% | HIGH: 70–100%
-    </p>
-  </section>
-
-  <section class="panel">
-    <h2>ค่าความมั่นใจของ AI</h2>
-
-    <div class="bar-row">
-      <div class="bar-label">
-        <span>Yawning — หาว</span>
-        <span id="value-Yawning">0%</span>
-      </div>
-      <div class="bar-background">
-        <div class="bar" id="bar-Yawning"></div>
-      </div>
-    </div>
-
-    <div class="bar-row">
-      <div class="bar-label">
-        <span>Eye_Open — ตาเปิด</span>
-        <span id="value-Eye_Open">0%</span>
-      </div>
-      <div class="bar-background">
-        <div class="bar" id="bar-Eye_Open"></div>
-      </div>
-    </div>
-
-    <div class="bar-row">
-      <div class="bar-label">
-        <span>Eye_Closed — ตาปิด</span>
-        <span id="value-Eye_Closed">0%</span>
-      </div>
-      <div class="bar-background">
-        <div class="bar" id="bar-Eye_Closed"></div>
-      </div>
-    </div>
-
-    <p id="modelClasses" class="note">
-      กำลังรอตรวจสอบคลาสในโมเดล
-    </p>
-  </section>
-
-  <section class="panel">
-    <h2>ค้นหาจุดพักรถ</h2>
-
-    <p>
-      กดปุ่มด้านล่างเพื่ออนุญาตให้เว็บไซต์ใช้ตำแหน่งปัจจุบัน
-      และค้นหาจุดพักรถใน Google Maps
-    </p>
-
-    <div class="buttons">
-      <button id="gpsBtn">ค้นหาจุดพักรถใกล้ฉัน</button>
-    </div>
-
-    <p id="gpsStatus" class="note">
-      ยังไม่ได้ขอตำแหน่ง GPS
-    </p>
-
-    <p class="note">
-      หากกำลังขับรถอยู่ ให้จอดในที่ปลอดภัยก่อนใช้งานโทรศัพท์
-    </p>
-  </section>
-
-  <section class="panel">
-    <h3>กติกาคะแนนทดลอง</h3>
-    <p>• ตาปิดต่อเนื่องเกิน 3 วินาที และ AI มั่นใจอย่างน้อย 80%: เพิ่ม 80 คะแนน</p>
-    <p>• หาวต่อเนื่องเกิน 3 วินาที: เพิ่ม 40 คะแนน</p>
-    <p>• หาว 2 ครั้งภายใน 1 นาที: เพิ่ม 40 คะแนน</p>
-    <p>• คะแนนสูงสุด 100 คะแนน</p>
-    <p class="note">
-      ระบบนี้เป็นต้นแบบทดลอง ไม่ใช่อุปกรณ์ที่รับรองความปลอดภัยในการขับขี่
-    </p>
-  </section>
-</main>
-
-<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.3.1/dist/tf.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@teachablemachine/pose@0.8.3/dist/teachablemachine-pose.min.js"></script>
-
-<script>
-  const MODEL_URL =
-    "https://teachablemachine.withgoogle.com/models/O5re32Lh5/";
-
-  const EXPECTED_CLASSES = [
-    "Yawning",
-    "Eye_Open",
-    "Eye_Closed"
-  ];
-
-  const CONFIDENCE_LIMIT = 0.80;
-
-  let model = null;
-  let cameraStream = null;
-  let running = false;
-  let predicting = false;
-  let animationFrame = null;
-
-  let riskScore = 0;
-  let lastRiskClass = "";
-  let classStartTime = 0;
-  let closedEventCounted = false;
-  let yawnEventCounted = false;
-  let yawnTimes = [];
-  let lastAlertLevel = "LOW";
-  let audioContext = null;
-
-  const video = document.getElementById("camera");
-  const placeholder = document.getElementById("placeholder");
-  const startBtn = document.getElementById("startBtn");
-  const stopBtn = document.getElementById("stopBtn");
-  const resultEl = document.getElementById("result");
-  const confidenceEl = document.getElementById("confidence");
-
-  function findExpectedClass(className) {
-    const normalized = String(className)
-      .trim()
-      .toLowerCase()
-      .replace(/[\s-]+/g, "_");
-
-    const aliases = {
-      "yawning": "Yawning",
-      "yawn": "Yawning",
-      "eye_open": "Eye_Open",
-      "eyes_open": "Eye_Open",
-      "open_eye": "Eye_Open",
-      "eye_closed": "Eye_Closed",
-      "eyes_closed": "Eye_Closed",
-      "closed_eye": "Eye_Closed"
-    };
-
-    return aliases[normalized] || null;
-  }
-
-  function setStatus(message, type = "normal") {
-    const status = document.getElementById("status");
-
-    status.textContent = message;
-    status.style.color =
-      type === "error" ? "#ff7373" :
-      type === "warning" ? "#ffbd69" :
-      "#a9c9ff";
-  }
-
-  function playAlertTone(level) {
-    try {
-      const AudioContextClass =
-        window.AudioContext || window.webkitAudioContext;
-
-      if (!AudioContextClass) return;
-
-      if (!audioContext) {
-        audioContext = new AudioContextClass();
-      }
-
-      if (audioContext.state === "suspended") {
-        audioContext.resume();
-      }
-
-      const now = audioContext.currentTime;
-      const high = level === "HIGH";
-      const count = high ? 3 : 1;
-
-      for (let i = 0; i < count; i++) {
-        const start = now + i * (high ? 0.22 : 0);
-        const oscillator = audioContext.createOscillator();
-        const gain = audioContext.createGain();
-
-        oscillator.type = "sine";
-        oscillator.frequency.value = high ? 1000 : 600;
-
-        gain.gain.setValueAtTime(0.001, start);
-        gain.gain.exponentialRampToValueAtTime(
-          high ? 0.20 : 0.07,
-          start + 0.025
-        );
-        gain.gain.exponentialRampToValueAtTime(
-          0.001,
-          start + 0.15
-        );
-
-        oscillator.connect(gain);
-        gain.connect(audioContext.destination);
-
-        oscillator.start(start);
-        oscillator.stop(start + 0.16);
-      }
-    } catch (error) {
-      console.warn("เล่นเสียงแจ้งเตือนไม่สำเร็จ", error);
-    }
-  }
-
-  function updateRiskDisplay() {
-    const level = document.getElementById("riskLevel");
-    const message = document.getElementById("riskMessage");
-    const bar = document.getElementById("riskBar");
-
-    document.getElementById("riskScore").textContent =
-      riskScore + "%";
-
-    bar.style.width = riskScore + "%";
-
-    let currentLevel;
-
-    if (riskScore >= 70) {
-      currentLevel = "HIGH";
-      level.textContent = "HIGH — ความเสี่ยงสูง";
-      level.style.color = "#ff5252";
-      bar.style.background = "#ff5252";
-      message.textContent =
-        "ความเสี่ยงสูง โปรดหยุดขับและหาที่จอดพักอย่างปลอดภัย";
-    } else if (riskScore >= 40) {
-      currentLevel = "MEDIUM";
-      level.textContent = "MEDIUM — เริ่มอ่อนล้า";
-      level.style.color = "#ffb74d";
-      bar.style.background = "#ffb74d";
-      message.textContent =
-        "เริ่มอ่อนล้า ควรหยุดพักในที่ปลอดภัย";
-    } else {
-      currentLevel = "LOW";
-      level.textContent = "LOW — ความเสี่ยงต่ำ";
-      level.style.color = "#66bb6a";
-      bar.style.background = "#55c78a";
-      message.textContent =
-        "คะแนนความเสี่ยงยังต่ำ ยังไม่มีการแจ้งเตือน";
-    }
-
-    if (currentLevel !== lastAlertLevel) {
-      if (currentLevel === "MEDIUM" || currentLevel === "HIGH") {
-        playAlertTone(currentLevel);
-      }
-
-      lastAlertLevel = currentLevel;
-    }
-  }
-
-  function addRiskScore(points) {
-    riskScore = Math.min(100, riskScore + points);
-    updateRiskDisplay();
-  }
-
-  function resetScore() {
-    riskScore = 0;
-    lastRiskClass = "";
-    classStartTime = 0;
-    closedEventCounted = false;
-    yawnEventCounted = false;
-    yawnTimes = [];
-    lastAlertLevel = "LOW";
-
-    updateRiskDisplay();
-
-    setStatus(
-      running
-        ? "รีเซ็ตคะแนนแล้ว กำลังตรวจจับต่อ"
-        : "รีเซ็ตคะแนนแล้ว"
-    );
-  }
-
-  function resetClassTracking() {
-    lastRiskClass = "";
-    classStartTime = 0;
-    closedEventCounted = false;
-    yawnEventCounted = false;
-  }
-
-  function updateClassTracking(currentClass, now) {
-    if (currentClass !== lastRiskClass) {
-      lastRiskClass = currentClass;
-      classStartTime = now;
-      closedEventCounted = false;
-      yawnEventCounted = false;
-
-      if (currentClass === "Yawning") {
-        yawnTimes = yawnTimes.filter(
-          time => now - time < 60000
-        );
-
-        yawnTimes.push(now);
-
-        if (yawnTimes.length >= 2) {
-          addRiskScore(40);
-          yawnTimes = [];
-          yawnEventCounted = true;
+        function sendToApp(stateText) {
+            if (stateText !== lastState) {
+                lastState = stateText;
+                statusDiv.innerText = "สถานะ: " + stateText;
+                // คำสั่งส่งค่ากลับไปหา MIT App Inventor ผ่าน WebViewer
+                if (window.AppInventor && window.AppInventor.setWebViewString) {
+                    window.AppInventor.setWebViewString(stateText);
+                }
+            }
         }
-      }
-    }
 
-    const duration = now - classStartTime;
+        function onResults(results) {
+            canvasElement.width = window.innerWidth;
+            canvasElement.height = window.innerHeight;
+            canvasCtx.save();
+            canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+            canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
 
-    if (
-      currentClass === "Eye_Closed" &&
-      duration > 3000 &&
-      !closedEventCounted
-    ) {
-      addRiskScore(80);
-      closedEventCounted = true;
-    }
+            if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
+                const landmarks = results.multiFaceLandmarks[0];
 
-    if (
-      currentClass === "Yawning" &&
-      duration > 3000 &&
-      !yawnEventCounted
-    ) {
-      addRiskScore(40);
-      yawnEventCounted = true;
-    }
-  }
+                // จุดสำคัญของตาบน-ล่าง (ตัวอย่างพิกัด MediaPipe สำหรับคำนวณความเปิดของตา)
+                // ตาซ้ายบน: 159, ล่าง: 145 / ตาขวาบน: 386, ล่าง: 374
+                const leftEyeTop = landmarks[159];
+                const leftEyeBottom = landmarks[145];
+                const rightEyeTop = landmarks[386];
+                const rightEyeBottom = landmarks[374];
 
-  async function startDetection() {
-    startBtn.disabled = true;
-    setStatus("กำลังโหลดโมเดล AI...");
+                // คำนวณระยะห่างเปลือกตา (EAR - Eye Aspect Ratio คร่าวๆ)
+                const leftEyeDist = Math.hypot(leftEyeTop.x - leftEyeBottom.x, leftEyeTop.y - leftEyeBottom.y);
+                const rightEyeDist = Math.hypot(rightEyeTop.x - rightEyeBottom.y, rightEyeTop.y - rightEyeBottom.y);
+                const avgEyeDist = (leftEyeDist + rightEyeDist) / 2;
 
-    try {
-      if (typeof tmPose === "undefined") {
-        throw new Error(
-          "โหลดไลบรารี Pose ไม่สำเร็จ กรุณาตรวจสอบอินเทอร์เน็ต"
-        );
-      }
+                // จุดปากบน-ล่าง สำหรับเช็คการหาว (ริมฝีปากบน: 13, ล่าง: 14)
+                const lipTop = landmarks[13];
+                const lipBottom = landmarks[14];
+                const mouthDist = Math.hypot(lipTop.x - lipBottom.x, lipTop.y - lipBottom.y);
 
-      const AudioContextClass =
-        window.AudioContext || window.webkitAudioContext;
-
-      if (AudioContextClass && !audioContext) {
-        audioContext = new AudioContextClass();
-      }
-
-      if (audioContext && audioContext.state === "suspended") {
-        await audioContext.resume();
-      }
-
-      if (!model) {
-        model = await tmPose.load(
-          MODEL_URL + "model.json",
-          MODEL_URL + "metadata.json"
-        );
-
-        const labels = model.getClassLabels();
-
-        document.getElementById("modelClasses").textContent =
-          "คลาสในโมเดล: " + labels.join(", ");
-
-        const missing = EXPECTED_CLASSES.filter(
-          expected =>
-            !labels.some(
-              label => findExpectedClass(label) === expected
-            )
-        );
-
-        if (missing.length) {
-          throw new Error(
-            "ไม่พบคลาสในโมเดล: " + missing.join(", ")
-          );
+                // กำหนดเงื่อนไข (Threshold สามารถปรับตัวเลขเพดานความกว้าง/แคบได้ตามจริง)
+                if (avgEyeDist < 0.022) {
+                    sendToApp("Eye_Closed (ตาปิด/ง่วง)");
+                    statusDiv.style.background = "rgba(255,0,0,0.8)";
+                } else if (mouthDist > 0.08) {
+                    sendToApp("Yawning (กำลังหาว)");
+                    statusDiv.style.background = "rgba(255,165,0,0.8)";
+                } else {
+                    sendToApp("Eye_Open (ปกติ)");
+                    statusDiv.style.background = "rgba(0,128,0,0.8)";
+                }
+            } else {
+                sendToApp("No Face (ไม่พบใบหน้า)");
+                statusDiv.style.background = "rgba(100,100,100,0.8)";
+            }
+            canvasCtx.restore();
         }
-      }
 
-      setStatus("กำลังขออนุญาตใช้กล้อง...");
-
-      cameraStream =
-        await navigator.mediaDevices.getUserMedia({
-          video: {
-            facingMode: "user",
-            width: { ideal: 640 },
-            height: { ideal: 480 }
-          },
-          audio: false
+        const faceMesh = new FaceMesh({
+            locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`
         });
+        faceMesh.setOptions({
+            maxNumFaces: 1,
+            refineLandmarks: true,
+            minDetectionConfidence: 0.5,
+            minTrackingConfidence: 0.5
+        });
+        faceMesh.onResults(onResults);
 
-      video.srcObject = cameraStream;
-
-      // ยืนยันไม่ให้ CSS กลับด้านภาพกล้อง
-      video.style.setProperty("transform", "none", "important");
-
-      video.hidden = false;
-      placeholder.hidden = true;
-
-      await video.play();
-
-      running = true;
-      stopBtn.disabled = false;
-
-      setStatus("กล้องพร้อม กำลังตรวจจับ");
-
-      animationFrame = requestAnimationFrame(predictLoop);
-    } catch (error) {
-      console.error(error);
-
-      running = false;
-      releaseCamera();
-
-      startBtn.disabled = false;
-      stopBtn.disabled = true;
-
-      setStatus(
-        "เริ่มตรวจจับไม่สำเร็จ: " + error.message,
-        "error"
-      );
-    }
-  }
-
-  async function predictLoop() {
-    if (!running || predicting) return;
-
-    predicting = true;
-
-    try {
-      const { posenetOutput } =
-        await model.estimatePose(video, false);
-
-      const predictions =
-        await model.predict(posenetOutput);
-
-      const scores = {};
-
-      EXPECTED_CLASSES.forEach(name => {
-        scores[name] = 0;
-      });
-
-      predictions.forEach(item => {
-        const name = findExpectedClass(item.className);
-
-        if (name) {
-          scores[name] = item.probability;
-        }
-      });
-
-      EXPECTED_CLASSES.forEach(name => {
-        const percent = Math.round(scores[name] * 100);
-
-        document.getElementById("value-" + name)
-          .textContent = percent + "%";
-
-        document.getElementById("bar-" + name)
-          .style.width = percent + "%";
-      });
-
-      const matched = predictions
-        .filter(item => findExpectedClass(item.className))
-        .sort((a, b) => b.probability - a.probability);
-
-      if (matched.length > 0) {
-        const top = matched[0];
-        const currentClass = findExpectedClass(top.className);
-
-        resultEl.textContent = currentClass;
-
-        confidenceEl.textContent =
-          Math.round(top.probability * 100) + "% confidence";
-
-        setStatus("ตรวจจับอยู่");
-
-        if (top.probability >= CONFIDENCE_LIMIT) {
-          updateClassTracking(currentClass, Date.now());
-        } else {
-          resetClassTracking();
-        }
-      } else {
-        resultEl.textContent = "ไม่พบคลาสที่ต้องการ";
-        confidenceEl.textContent = "ตรวจสอบชื่อคลาสในโมเดล";
-
-        resetClassTracking();
-
-        setStatus(
-          "ชื่อคลาสไม่ตรงกับ Yawning, Eye_Open, Eye_Closed",
-          "warning"
-        );
-      }
-    } catch (error) {
-      console.error(error);
-
-      running = false;
-      releaseCamera();
-
-      startBtn.disabled = false;
-      stopBtn.disabled = true;
-
-      setStatus(
-        "เกิดข้อผิดพลาดในการตรวจจับ: " + error.message,
-        "error"
-      );
-    } finally {
-      predicting = false;
-
-      if (running) {
-        animationFrame = requestAnimationFrame(predictLoop);
-      }
-    }
-  }
-
-  function releaseCamera() {
-    if (animationFrame !== null) {
-      cancelAnimationFrame(animationFrame);
-      animationFrame = null;
-    }
-
-    if (cameraStream) {
-      cameraStream.getTracks().forEach(track => track.stop());
-      cameraStream = null;
-    }
-
-    video.pause();
-    video.srcObject = null;
-    video.hidden = true;
-    placeholder.hidden = false;
-  }
-
-  function stopDetection() {
-    running = false;
-
-    releaseCamera();
-
-    startBtn.disabled = false;
-    stopBtn.disabled = true;
-
-    setStatus("หยุดกล้องแล้ว");
-  }
-
-  // ขอ GPS เฉพาะเมื่อผู้ใช้กดปุ่ม
-  function findNearbyRestStops() {
-    const gpsStatus = document.getElementById("gpsStatus");
-
-    if (!navigator.geolocation) {
-      gpsStatus.textContent =
-        "เบราว์เซอร์นี้ไม่รองรับ GPS";
-      return;
-    }
-
-    gpsStatus.textContent = "กำลังขอตำแหน่ง GPS...";
-
-    navigator.geolocation.getCurrentPosition(
-      position => {
-        const lat = position.coords.latitude;
-        const lon = position.coords.longitude;
-
-        gpsStatus.textContent =
-          "ได้รับตำแหน่งแล้ว กำลังเปิด Google Maps";
-
-        const mapsUrl =
-          "https://www.google.com/maps/search/" +
-          encodeURIComponent("จุดพักรถ") +
-          "/@" + lat + "," + lon + ",14z";
-
-        window.open(mapsUrl, "_blank", "noopener");
-      },
-      error => {
-        let message = "ไม่สามารถรับตำแหน่ง GPS ได้";
-
-        if (error.code === error.PERMISSION_DENIED) {
-          message =
-            "คุณไม่อนุญาตให้ใช้ตำแหน่ง กรุณาเปิดสิทธิ์ Location";
-        } else if (
-          error.code === error.POSITION_UNAVAILABLE
-        ) {
-          message = "ไม่พบตำแหน่งอุปกรณ์ในขณะนี้";
-        } else if (error.code === error.TIMEOUT) {
-          message =
-            "การค้นหาตำแหน่งหมดเวลา กรุณาลองใหม่";
-        }
-
-        gpsStatus.textContent = message;
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 15000,
-        maximumAge: 30000
-      }
-    );
-  }
-
-  startBtn.addEventListener("click", startDetection);
-  stopBtn.addEventListener("click", stopDetection);
-
-  document.getElementById("resetBtn")
-    .addEventListener("click", resetScore);
-
-  document.getElementById("gpsBtn")
-    .addEventListener("click", findNearbyRestStops);
-
-  window.addEventListener("pagehide", () => {
-    running = false;
-    releaseCamera();
-  });
-
-  updateRiskDisplay();
-</script>
+        const camera = new Camera(videoElement, {
+            onFrame: async () => {
+                await faceMesh.send({ image: videoElement });
+            },
+            width: 640,
+            height: 480
+        });
+        camera.start();
+    </script>
 </body>
 </html>
