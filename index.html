@@ -3,36 +3,36 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Drive Monitor Detection</title>
-    <!-- โหลดไลบรารี MediaPipe Face Mesh -->
+    <title>Drive Monitor Percentage Scoring</title>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
     <style>
         body { margin: 0; background: #000; text-align: center; color: white; font-family: sans-serif; }
-        video { display: none; } /* ซ่อนวิดีโอดิบ แสดงผลแค่ Canvas */
+        video { display: none; }
         canvas { 
             width: 100vw; 
             height: 100vh; 
             object-fit: cover; 
-            /* คงค่ากล้องไม่ให้กลับด้าน (โหมดกระจกเงาที่ถูกต้อง) */
             -webkit-transform: scaleX(-1); 
             transform: scaleX(-1); 
         }
-        #status { 
+        #status-box { 
             position: absolute; 
             top: 20px; 
             left: 50%; 
             transform: translateX(-50%); 
-            background: rgba(0,0,0,0.7); 
-            padding: 10px 20px; 
-            font-size: 20px; 
-            border-radius: 8px; 
+            background: rgba(0,0,0,0.8); 
+            padding: 15px 25px; 
+            font-size: 18px; 
+            border-radius: 12px; 
             z-index: 10; 
+            width: 80%;
+            max-width: 400px;
         }
     </style>
 </head>
 <body>
-    <div id="status">กำลังโหลดระบบตรวจจับ...</div>
+    <div id="status-box">กำลังเริ่มระบบประเมินความเสี่ยง...</div>
     <video id="webcam" autoplay playsinline></video>
     <canvas id="output_canvas"></canvas>
 
@@ -40,17 +40,22 @@
         const videoElement = document.getElementById('webcam');
         const canvasElement = document.getElementById('output_canvas');
         const canvasCtx = canvasElement.getContext('2d');
-        const statusDiv = document.getElementById('status');
+        const statusBox = document.getElementById('status-box');
 
-        let lastState = "";
+        let drowsyScore = 0; // คะแนนสะสมเริ่มต้น (0-100)
+        let lastSentAlert = "";
 
-        function sendToApp(stateText) {
-            if (stateText !== lastState) {
-                lastState = stateText;
-                statusDiv.innerText = "สถานะ: " + stateText;
-                // ส่งค่ากลับไปหา MIT App Inventor ผ่าน WebViewer
+        // ตัวแปรสำหรับจับเวลาความต่อเนื่อง (เกิน 3 วินาที)
+        let eyeClosedCounter = 0;
+        let yawnCounter = 0;
+        let headDownCounter = 0;
+
+        function updateApp(riskLevel, score) {
+            const dataString = riskLevel + "," + score; 
+            if (dataString !== lastSentAlert) {
+                lastSentAlert = dataString;
                 if (window.AppInventor && window.AppInventor.setWebViewString) {
-                    window.AppInventor.setWebViewString(stateText);
+                    window.AppInventor.setWebViewString(dataString);
                 }
             }
         }
@@ -65,36 +70,88 @@
             if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
                 const landmarks = results.multiFaceLandmarks[0];
 
-                // พิกัดจุดตาบน-ล่าง ของ MediaPipe Face Mesh
-                const leftEyeTop = landmarks[159];
-                const leftEyeBottom = landmarks[145];
-                const rightEyeTop = landmarks[386];
-                const rightEyeBottom = landmarks[374];
-
-                // คำนวณระยะห่างเปลือกตาเฉลี่ย (EAR)
+                // 1. คำนวณระยะตา (Eye_Closed) ปรับค่าเกณฑ์เป็น 0.010 ตามที่กำหนด
+                const leftEyeTop = landmarks[159], leftEyeBottom = landmarks[145];
+                const rightEyeTop = landmarks[386], rightEyeBottom = landmarks[374];
                 const leftEyeDist = Math.hypot(leftEyeTop.x - leftEyeBottom.x, leftEyeTop.y - leftEyeBottom.y);
                 const rightEyeDist = Math.hypot(rightEyeTop.x - rightEyeBottom.x, rightEyeTop.y - rightEyeBottom.y);
                 const avgEyeDist = (leftEyeDist + rightEyeDist) / 2;
 
-                // พิกัดจุดปากบน-ล่าง สำหรับเช็คการหาว
-                const lipTop = landmarks[13];
-                const lipBottom = landmarks[14];
+                // 2. คำนวณระยะปาก (Yawning)
+                const lipTop = landmarks[13], lipBottom = landmarks[14];
                 const mouthDist = Math.hypot(lipTop.x - lipBottom.x, lipTop.y - lipBottom.y);
 
-                // ใช้ค่า Threshold ดั้งเดิมรอบแรก (0.010) ที่สมดุลที่สุด
+                // 3. ตรวจสอบการก้มหน้า (Head_Down)
+                const noseTip = landmarks[1]; 
+                const isHeadDown = noseTip.y > 0.65; 
+
+                // เช็คหลับตา (< 0.010 ต่อเนื่องเกิน 3 วินาที -> +80%)
                 if (avgEyeDist < 0.010) {
-                    sendToApp("Eye_Closed (ตาปิด/ง่วง)");
-                    statusDiv.style.background = "rgba(255,0,0,0.8)";
-                } else if (mouthDist > 0.08) {
-                    sendToApp("Yawning (กำลังหาว)");
-                    statusDiv.style.background = "rgba(255,165,0,0.8)";
+                    eyeClosedCounter++;
+                    if (eyeClosedCounter >= 30) { 
+                        drowsyScore += 80;
+                        eyeClosedCounter = 0; 
+                    }
                 } else {
-                    sendToApp("Eye_Open (ปกติ)");
-                    statusDiv.style.background = "rgba(0,128,0,0.8)";
+                    eyeClosedCounter = 0;
                 }
+
+                // เช็คหาว (ต่อเนื่องเกิน 3 วินาที -> +40%)
+                if (mouthDist > 0.08) {
+                    yawnCounter++;
+                    if (yawnCounter >= 30) { 
+                        drowsyScore += 40;
+                        yawnCounter = 0;
+                    }
+                } else {
+                    yawnCounter = 0;
+                }
+
+                // เช็คก้มหน้า (ต่อเนื่องเกิน 3 วินาที -> +40%)
+                if (isHeadDown) {
+                    headDownCounter++;
+                    if (headDownCounter >= 30) { 
+                        drowsyScore += 40;
+                        headDownCounter = 0;
+                    }
+                } else {
+                    headDownCounter = 0;
+                }
+
+                // ค่อยๆ ลดคะแนนสะสมลงเมื่อปกติ
+                if (avgEyeDist >= 0.010 && mouthDist <= 0.08 && !isHeadDown) {
+                    if (drowsyScore > 0) drowsyScore -= 1; 
+                }
+
+                // จำกัดคะแนนสูงสุด 100 และต่ำสุด 0
+                if (drowsyScore > 100) drowsyScore = 100;
+                if (drowsyScore < 0) drowsyScore = 0;
+
+                // ประเมินระดับความเสี่ยง: LOW = 0–39, MEDIUM = 40–69, HIGH = 70–100
+                let riskLevel = "";
+                let statusText = "";
+
+                if (drowsyScore >= 70) {
+                    riskLevel = "HIGH";
+                    statusText = "🚨 HIGH: ความเสี่ยงสูง (อันตราย!)";
+                    statusBox.style.background = "rgba(255, 0, 0, 0.85)";
+                } else if (drowsyScore >= 40) {
+                    riskLevel = "MEDIUM";
+                    statusText = "⚠️ MEDIUM: ความเสี่ยงปานกลาง";
+                    statusBox.style.background = "rgba(255, 140, 0, 0.85)";
+                } else {
+                    riskLevel = "LOW";
+                    statusText = "✅ LOW: ปกติ / ปลอดภัย";
+                    statusBox.style.background = "rgba(0, 128, 0, 0.85)";
+                }
+
+                updateApp(riskLevel, drowsyScore);
+                statusBox.innerHTML = statusText + "<br><small>คะแนนความเสี่ยง: " + drowsyScore + "%</small>";
+
             } else {
-                sendToApp("No Face (ไม่พบใบหน้า)");
-                statusDiv.style.background = "rgba(100,100,100,0.8)";
+                statusBox.style.background = "rgba(100, 100, 100, 0.85)";
+                statusBox.innerHTML = "❌ ไม่พบใบหน้าผู้ขับขี่";
+                updateApp("LOW", 0);
             }
             canvasCtx.restore();
         }
@@ -113,13 +170,9 @@
         faceMesh.onResults(onResults);
 
         const camera = new Camera(videoElement, {
-            onFrame: async () => {
-                await faceMesh.send({ image: videoElement });
-            },
-            width: 640,
-            height: 480
+            onFrame: async () => { await faceMesh.send({ image: videoElement }); },
+            width: 640, height: 480
         });
-        
         camera.start();
     </script>
 </body>
