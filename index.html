@@ -14,7 +14,7 @@
             width: 100vw; 
             height: 100vh; 
             object-fit: cover; 
-            /* กลับด้านภาพไม่ให้สลับซ้ายขวา (โหมดกระจกเงาที่ถูกต้อง) */
+            /* คงค่ากล้องไม่ให้กลับด้าน (โหมดกระจกเงาที่ถูกต้อง) ไว้เหมือนเดิม */
             -webkit-transform: scaleX(-1); 
             transform: scaleX(-1); 
         }
@@ -43,7 +43,7 @@
         const statusDiv = document.getElementById('status');
 
         let lastState = "";
-        let closedEyeFrames = 0; // ตัวแปรหน่วงเฟรมป้องกันกระพริบตาหลอก
+        let closedEyeFrames = 0; 
 
         function sendToApp(stateText) {
             if (stateText !== lastState) {
@@ -82,16 +82,16 @@
                 const lipBottom = landmarks[14];
                 const mouthDist = Math.hypot(lipTop.x - lipBottom.x, lipTop.y - lipBottom.y);
 
-                // ปรับเกณฑ์ Threshold ให้ยืดหยุ่นรองรับมุมมองหน้าตรงมากขึ้น (ค่า 0.024 สามารถปรับลด/เพิ่มได้ตามความเหมาะสม)
-                if (avgEyeDist < 0.024) {
+                // ปรับแก้ตรงนี้: ลดค่า Threshold ลงจาก 0.024 เป็น 0.017 เพื่อให้ต้องหลับตาจริงๆ ถึงจะจับว่าปิด (แก้ปัญหาลืมตาแต่บอกว่าตาปิด)
+                if (avgEyeDist < 0.017) {
                     closedEyeFrames++;
-                    // ต้องหลับตาติดต่อกันมากกว่า 2 เฟรมขึ้นไป ถึงจะนว่าตาปิดจริง (ลดการแจ้งเตือนผิดพลาดจากการกระพริบตาปกติ)
-                    if (closedEyeFrames > 2) {
+                    // เพิ่มจำนวนเฟรมหน่วงเป็น 3 เพื่อกรองการกระพริบตาเร็วๆ ออก
+                    if (closedEyeFrames > 3) {
                         sendToApp("Eye_Closed (ตาปิด/ง่วง)");
                         statusDiv.style.background = "rgba(255,0,0,0.8)";
                     }
                 } else {
-                    closedEyeFrames = 0; // รีเซ็ตเมื่อตื่นหรือลืมตาปกติ
+                    closedEyeFrames = 0; // รีเซ็ตเมื่อลืมตาปกติ
                     
                     if (mouthDist > 0.08) {
                         sendToApp("Yawning (กำลังหาว)");
