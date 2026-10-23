@@ -10,9 +10,25 @@
     <style>
         body { margin: 0; background: #000; text-align: center; color: white; font-family: sans-serif; }
         video { display: none; } /* ซ่อนวิดีโอดิบ แสดงผลแค่ Canvas */
-        canvas { width: 100vw; height: 100vh; object-fit: cover; }
-        #status { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); 
-                  background: rgba(0,0,0,0.7); padding: 10px 20px; font-size: 20px; border-radius: 8px; }
+        canvas { 
+            width: 100vw; 
+            height: 100vh; 
+            object-fit: cover; 
+            /* กลับด้านภาพไม่ให้สลับซ้ายขวา (โหมดกระจกเงาที่ถูกต้อง) */
+            -webkit-transform: scaleX(-1); 
+            transform: scaleX(-1); 
+        }
+        #status { 
+            position: absolute; 
+            top: 20px; 
+            left: 50%; 
+            transform: translateX(-50%); 
+            background: rgba(0,0,0,0.7); 
+            padding: 10px 20px; 
+            font-size: 20px; 
+            border-radius: 8px; 
+            z-index: 10; 
+        }
     </style>
 </head>
 <body>
@@ -27,12 +43,13 @@
         const statusDiv = document.getElementById('status');
 
         let lastState = "";
+        let closedEyeFrames = 0; // ตัวแปรหน่วงเฟรมป้องกันกระพริบตาหลอก
 
         function sendToApp(stateText) {
             if (stateText !== lastState) {
                 lastState = stateText;
                 statusDiv.innerText = "สถานะ: " + stateText;
-                // คำสั่งส่งค่ากลับไปหา MIT App Inventor ผ่าน WebViewer
+                // ส่งค่ากลับไปหา MIT App Inventor ผ่าน WebViewer
                 if (window.AppInventor && window.AppInventor.setWebViewString) {
                     window.AppInventor.setWebViewString(stateText);
                 }
@@ -49,33 +66,40 @@
             if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
                 const landmarks = results.multiFaceLandmarks[0];
 
-                // จุดสำคัญของตาบน-ล่าง (ตัวอย่างพิกัด MediaPipe สำหรับคำนวณความเปิดของตา)
-                // ตาซ้ายบน: 159, ล่าง: 145 / ตาขวาบน: 386, ล่าง: 374
+                // พิกัดจุดตาบน-ล่าง ของ MediaPipe Face Mesh
                 const leftEyeTop = landmarks[159];
                 const leftEyeBottom = landmarks[145];
                 const rightEyeTop = landmarks[386];
                 const rightEyeBottom = landmarks[374];
 
-                // คำนวณระยะห่างเปลือกตา (EAR - Eye Aspect Ratio คร่าวๆ)
+                // คำนวณระยะห่างเปลือกตาเฉลี่ย (EAR)
                 const leftEyeDist = Math.hypot(leftEyeTop.x - leftEyeBottom.x, leftEyeTop.y - leftEyeBottom.y);
-                const rightEyeDist = Math.hypot(rightEyeTop.x - rightEyeBottom.y, rightEyeTop.y - rightEyeBottom.y);
+                const rightEyeDist = Math.hypot(rightEyeTop.x - rightEyeBottom.x, rightEyeTop.y - rightEyeBottom.y);
                 const avgEyeDist = (leftEyeDist + rightEyeDist) / 2;
 
-                // จุดปากบน-ล่าง สำหรับเช็คการหาว (ริมฝีปากบน: 13, ล่าง: 14)
+                // พิกัดจุดปากบน-ล่าง สำหรับเช็คการหาว
                 const lipTop = landmarks[13];
                 const lipBottom = landmarks[14];
                 const mouthDist = Math.hypot(lipTop.x - lipBottom.x, lipTop.y - lipBottom.y);
 
-                // กำหนดเงื่อนไข (Threshold สามารถปรับตัวเลขเพดานความกว้าง/แคบได้ตามจริง)
-                if (avgEyeDist < 0.022) {
-                    sendToApp("Eye_Closed (ตาปิด/ง่วง)");
-                    statusDiv.style.background = "rgba(255,0,0,0.8)";
-                } else if (mouthDist > 0.08) {
-                    sendToApp("Yawning (กำลังหาว)");
-                    statusDiv.style.background = "rgba(255,165,0,0.8)";
+                // ปรับเกณฑ์ Threshold ให้ยืดหยุ่นรองรับมุมมองหน้าตรงมากขึ้น (ค่า 0.024 สามารถปรับลด/เพิ่มได้ตามความเหมาะสม)
+                if (avgEyeDist < 0.024) {
+                    closedEyeFrames++;
+                    // ต้องหลับตาติดต่อกันมากกว่า 2 เฟรมขึ้นไป ถึงจะนว่าตาปิดจริง (ลดการแจ้งเตือนผิดพลาดจากการกระพริบตาปกติ)
+                    if (closedEyeFrames > 2) {
+                        sendToApp("Eye_Closed (ตาปิด/ง่วง)");
+                        statusDiv.style.background = "rgba(255,0,0,0.8)";
+                    }
                 } else {
-                    sendToApp("Eye_Open (ปกติ)");
-                    statusDiv.style.background = "rgba(0,128,0,0.8)";
+                    closedEyeFrames = 0; // รีเซ็ตเมื่อตื่นหรือลืมตาปกติ
+                    
+                    if (mouthDist > 0.08) {
+                        sendToApp("Yawning (กำลังหาว)");
+                        statusDiv.style.background = "rgba(255,165,0,0.8)";
+                    } else {
+                        sendToApp("Eye_Open (ปกติ)");
+                        statusDiv.style.background = "rgba(0,128,0,0.8)";
+                    }
                 }
             } else {
                 sendToApp("No Face (ไม่พบใบหน้า)");
@@ -87,12 +111,14 @@
         const faceMesh = new FaceMesh({
             locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`
         });
+        
         faceMesh.setOptions({
             maxNumFaces: 1,
             refineLandmarks: true,
             minDetectionConfidence: 0.5,
             minTrackingConfidence: 0.5
         });
+        
         faceMesh.onResults(onResults);
 
         const camera = new Camera(videoElement, {
@@ -102,6 +128,7 @@
             width: 640,
             height: 480
         });
+        
         camera.start();
     </script>
 </body>
