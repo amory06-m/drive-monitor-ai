@@ -81,8 +81,8 @@
                 const lipBottom = landmarks[14];
                 const mouthDist = Math.hypot(lipTop.x - lipBottom.x, lipTop.y - lipBottom.y);
 
-                // ใช้ค่า Threshold ดั้งเดิมรอบแรก (0.022) ที่สมดุลที่สุด
-                if (avgEyeDist < 0.022) {
+                // ใช้ค่า Threshold ดั้งเดิมรอบแรก (0.010) ที่สมดุลที่สุด
+                if (avgEyeDist < 0.010) {
                     sendToApp("Eye_Closed (ตาปิด/ง่วง)");
                     statusDiv.style.background = "rgba(255,0,0,0.8)";
                 } else if (mouthDist > 0.08) {
