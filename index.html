@@ -14,7 +14,7 @@
             width: 100vw; 
             height: 100vh; 
             object-fit: cover; 
-            /* คงค่ากล้องไม่ให้กลับด้าน (โหมดกระจกเงาที่ถูกต้อง) ไว้เหมือนเดิม */
+            /* คงค่ากล้องไม่ให้กลับด้าน (โหมดกระจกเงาที่ถูกต้อง) */
             -webkit-transform: scaleX(-1); 
             transform: scaleX(-1); 
         }
@@ -43,7 +43,6 @@
         const statusDiv = document.getElementById('status');
 
         let lastState = "";
-        let closedEyeFrames = 0; 
 
         function sendToApp(stateText) {
             if (stateText !== lastState) {
@@ -82,24 +81,16 @@
                 const lipBottom = landmarks[14];
                 const mouthDist = Math.hypot(lipTop.x - lipBottom.x, lipTop.y - lipBottom.y);
 
-                // ปรับแก้ตรงนี้: ลดค่า Threshold ลงจาก 0.024 เป็น 0.017 เพื่อให้ต้องหลับตาจริงๆ ถึงจะจับว่าปิด (แก้ปัญหาลืมตาแต่บอกว่าตาปิด)
-                if (avgEyeDist < 0.017) {
-                    closedEyeFrames++;
-                    // เพิ่มจำนวนเฟรมหน่วงเป็น 3 เพื่อกรองการกระพริบตาเร็วๆ ออก
-                    if (closedEyeFrames > 3) {
-                        sendToApp("Eye_Closed (ตาปิด/ง่วง)");
-                        statusDiv.style.background = "rgba(255,0,0,0.8)";
-                    }
+                // ใช้ค่า Threshold ดั้งเดิมรอบแรก (0.022) ที่สมดุลที่สุด
+                if (avgEyeDist < 0.022) {
+                    sendToApp("Eye_Closed (ตาปิด/ง่วง)");
+                    statusDiv.style.background = "rgba(255,0,0,0.8)";
+                } else if (mouthDist > 0.08) {
+                    sendToApp("Yawning (กำลังหาว)");
+                    statusDiv.style.background = "rgba(255,165,0,0.8)";
                 } else {
-                    closedEyeFrames = 0; // รีเซ็ตเมื่อลืมตาปกติ
-                    
-                    if (mouthDist > 0.08) {
-                        sendToApp("Yawning (กำลังหาว)");
-                        statusDiv.style.background = "rgba(255,165,0,0.8)";
-                    } else {
-                        sendToApp("Eye_Open (ปกติ)");
-                        statusDiv.style.background = "rgba(0,128,0,0.8)";
-                    }
+                    sendToApp("Eye_Open (ปกติ)");
+                    statusDiv.style.background = "rgba(0,128,0,0.8)";
                 }
             } else {
                 sendToApp("No Face (ไม่พบใบหน้า)");
