@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Drive Monitor Percentage Scoring</title>
+    <title>Drive Monitor Research Scoring</title>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
     <style>
@@ -42,10 +42,10 @@
         const canvasCtx = canvasElement.getContext('2d');
         const statusBox = document.getElementById('status-box');
 
-        let drowsyScore = 0; // คะแนนสะสมเริ่มต้น (0-100)
+        let drowsyScore = 0; // คะแนนสะสมเริ่มต้น (0-100%)
         let lastSentAlert = "";
 
-        // ตัวแปรสำหรับจับเวลาความต่อเนื่อง (เกิน 3 วินาที)
+        // ตัวแปรจับเวลาความต่อเนื่องตามงานวิจัย
         let eyeClosedCounter = 0;
         let yawnCounter = 0;
         let headDownCounter = 0;
@@ -70,55 +70,55 @@
             if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
                 const landmarks = results.multiFaceLandmarks[0];
 
-                // 1. คำนวณระยะตา (Eye_Closed) ปรับค่าเกณฑ์เป็น 0.010 ตามที่กำหนด
+                // คำนวณระยะตา (Eye_Closed) เกณฑ์ 0.010
                 const leftEyeTop = landmarks[159], leftEyeBottom = landmarks[145];
                 const rightEyeTop = landmarks[386], rightEyeBottom = landmarks[374];
                 const leftEyeDist = Math.hypot(leftEyeTop.x - leftEyeBottom.x, leftEyeTop.y - leftEyeBottom.y);
                 const rightEyeDist = Math.hypot(rightEyeTop.x - rightEyeBottom.x, rightEyeTop.y - rightEyeBottom.y);
                 const avgEyeDist = (leftEyeDist + rightEyeDist) / 2;
 
-                // 2. คำนวณระยะปาก (Yawning)
+                // คำนวณระยะปาก (Yawning)
                 const lipTop = landmarks[13], lipBottom = landmarks[14];
                 const mouthDist = Math.hypot(lipTop.x - lipBottom.x, lipTop.y - lipBottom.y);
 
-                // 3. ตรวจสอบการก้มหน้า (Head_Down)
+                // ตรวจสอบการก้มหน้า (Head_Down)
                 const noseTip = landmarks[1]; 
                 const isHeadDown = noseTip.y > 0.65; 
 
-                // เช็คหลับตา (< 0.010 ต่อเนื่องเกิน 3 วินาที -> +80%)
+                // 1. หลับตาต่อเนื่องเกิน 3 วินาที (+40%)
                 if (avgEyeDist < 0.010) {
                     eyeClosedCounter++;
                     if (eyeClosedCounter >= 30) { 
-                        drowsyScore += 80;
+                        drowsyScore += 40;
                         eyeClosedCounter = 0; 
                     }
                 } else {
                     eyeClosedCounter = 0;
                 }
 
-                // เช็คหาว (ต่อเนื่องเกิน 3 วินาที -> +40%)
+                // 2. หาวต่อเนื่องเกิน 3 วินาที (+20%)
                 if (mouthDist > 0.08) {
                     yawnCounter++;
                     if (yawnCounter >= 30) { 
-                        drowsyScore += 40;
+                        drowsyScore += 20;
                         yawnCounter = 0;
                     }
                 } else {
                     yawnCounter = 0;
                 }
 
-                // เช็คก้มหน้า (ต่อเนื่องเกิน 3 วินาที -> +40%)
+                // 3. ก้มหน้าต่อเนื่อง (+20%)
                 if (isHeadDown) {
                     headDownCounter++;
                     if (headDownCounter >= 30) { 
-                        drowsyScore += 40;
+                        drowsyScore += 20;
                         headDownCounter = 0;
                     }
                 } else {
                     headDownCounter = 0;
                 }
 
-                // ค่อยๆ ลดคะแนนสะสมลงเมื่อปกติ
+                // ค่อยๆ ลดคะแนนสะสมลงเมื่อขับขี่ปกติ
                 if (avgEyeDist >= 0.010 && mouthDist <= 0.08 && !isHeadDown) {
                     if (drowsyScore > 0) drowsyScore -= 1; 
                 }
@@ -127,17 +127,17 @@
                 if (drowsyScore > 100) drowsyScore = 100;
                 if (drowsyScore < 0) drowsyScore = 0;
 
-                // ประเมินระดับความเสี่ยง: LOW = 0–39, MEDIUM = 40–69, HIGH = 70–100
+                // ระดับความเสี่ยง: LOW = 0–49, MEDIUM = 50–79, HIGH = 80–100
                 let riskLevel = "";
                 let statusText = "";
 
-                if (drowsyScore >= 70) {
+                if (drowsyScore >= 80) {
                     riskLevel = "HIGH";
-                    statusText = "🚨 HIGH: ความเสี่ยงสูง (อันตราย!)";
+                    statusText = "🚨 HIGH: อันตราย! (วิกฤต)";
                     statusBox.style.background = "rgba(255, 0, 0, 0.85)";
-                } else if (drowsyScore >= 40) {
+                } else if (drowsyScore >= 50) {
                     riskLevel = "MEDIUM";
-                    statusText = "⚠️ MEDIUM: ความเสี่ยงปานกลาง";
+                    statusText = "⚠️ MEDIUM: เสี่ยงปานกลาง (เริ่มล้า)";
                     statusBox.style.background = "rgba(255, 140, 0, 0.85)";
                 } else {
                     riskLevel = "LOW";
