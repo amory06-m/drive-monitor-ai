@@ -131,10 +131,17 @@
                 let riskLevel = "";
                 let statusText = "";
 
-                if (drowsyScore >= 80) {
-                    riskLevel = "HIGH";
-                    statusText = "🚨 HIGH: อันตราย! (วิกฤต)";
-                    statusBox.style.background = "rgba(255, 0, 0, 0.85)";
+            if (drowsyScore >= 80) {
+                riskLevel = "HIGH";
+                statusText = "🚨 HIGH: อันตราย! (วิกฤต)";
+                statusBox.style.background = "rgba(255, 0, 0, 0.85)";
+                
+                // นำโค้ดส่งค่าสลับค่าว่างมาวางไว้ตรงนี้ เพื่อแก้ปัญหาแจ้งเตือนซ้ำ
+                window.AppInventor.setWebViewString("");
+                setTimeout(function() {
+                    window.AppInventor.setWebViewString(riskLevel + "," + statusText);
+                }, 100);
+
                 } else if (drowsyScore >= 50) {
                     riskLevel = "MEDIUM";
                     statusText = "⚠️ MEDIUM: เสี่ยงปานกลาง (เริ่มล้า)";
